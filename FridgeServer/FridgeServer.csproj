@@ -5,15 +5,34 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Migrations\20180411163537_Update4.cs" />
+    <Compile Remove="Migrations\20180411163537_Update4.Designer.cs" />
+    <Compile Remove="Migrations\20180412194417_Update.cs" />
+    <Compile Remove="Migrations\20180412194417_Update.Designer.cs" />
+    <Compile Remove="Migrations\20180412194537_Update5.cs" />
+    <Compile Remove="Migrations\20180412194537_Update5.Designer.cs" />
+    <Compile Remove="Migrations\20180412194705_Update5.cs" />
+    <Compile Remove="Migrations\20180412194705_Update5.Designer.cs" />
+    <Compile Remove="Migrations\20180415175953_Update6.cs" />
+    <Compile Remove="Migrations\20180415175953_Update6.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+    <Folder Include="obj\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="2.0.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.2" />
   </ItemGroup>
+
+  <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>
