@@ -20,15 +20,12 @@ namespace FridgeServer.Services
 
         public  long GuessById(int id)
         {
-            // db.Grocery.Include("MoreInformations").Include("Details")
+            //getting Moreinformatio List
             var grocery =  db.Grocery.Include("MoreInformations").SingleOrDefault(m => m.Id == id);
             if (grocery.MoreInformations==null) return 9999999;
 
-
+            //Convert Moreinformatio To lifetimes&No
             var lifeTimes = new List<lifetimeList>();
-
-           // = grocery.MoreInformations.ConvertAll<lifetimeList>(new Converter<MoreInformations, lifetimeList>(s =>{  return 0;}));
-
             foreach (var item in grocery.MoreInformations)//extracting the lifetimes only
             {
                 var x = item.LifeTime;
@@ -36,8 +33,7 @@ namespace FridgeServer.Services
                 var XxX = new lifetimeList()
                 {
                     LifeTime = (long)x,
-                    No = (int)item.No
-
+                    No = (int)y
                 };
                 lifeTimes.Add(XxX);
             }
