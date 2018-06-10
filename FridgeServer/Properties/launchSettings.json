@@ -2,6 +2,10 @@
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
+    "iis": {
+      "applicationUrl": "http://localhost/FridgeServer",
+      "sslPort": 0
+    },
     "iisExpress": {
       "applicationUrl": "http://localhost:6291/",
       "sslPort": 0
