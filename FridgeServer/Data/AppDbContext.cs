@@ -8,7 +8,6 @@ namespace FridgeServer.Data
         //Scoped constructor
         public AppDbContext(DbContextOptions<AppDbContext>  options) : base(options)
         {
-
         }
 
         //Singletone constructor
@@ -20,7 +19,7 @@ namespace FridgeServer.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            // Used when instantiating db context outside IoC 
+            // Used when initializing db context outside IoC (inversion of control)
             if (connectionString != null)
             {
                 var config = connectionString;
@@ -32,7 +31,6 @@ namespace FridgeServer.Data
         //DbSet
 
         public DbSet<Grocery> Grocery { get; set; }
-
         public DbSet<MoreInformations> MoreInformations { get; set; }
 
     }
