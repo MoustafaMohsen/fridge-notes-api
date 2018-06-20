@@ -17,6 +17,8 @@ namespace FridgeServer.Controllers
     [Route("api/GroceriesApi")]
     public class GroceriesApiController : Controller
     {
+        
+          
         private readonly AppDbContext db;
         private  GuessTimeout guessTimeout;
         private const string passedValidation = "passed Validation";
@@ -25,7 +27,7 @@ namespace FridgeServer.Controllers
             db = context;
             guessTimeout = _guessTimeout;
         }
-
+        
 
         /// <summary>
         /// BASE : "api/GroceriesApi"
@@ -43,6 +45,7 @@ namespace FridgeServer.Controllers
         /// Guess Timeout : "guess/{id}"
         /// </summary>
 
+            
 
         //============ Request Handlers ===========//
 
@@ -72,6 +75,8 @@ namespace FridgeServer.Controllers
 
             return Ok(grocery);
         }
+
+        
 
         //===== Updates
         // PUT
@@ -116,7 +121,7 @@ namespace FridgeServer.Controllers
             {
                 //--------------add logic-------------//
                 //PostValidation
-                if (GroceryExistsName(grocery.Name)) { return Content("name already exists"); }//validate
+                if (GroceryExistsName(grocery.Name)) { return Ok("name already exists"); }//validate
 
                 grocery.MoreInformations = UpdateInformationsAdd(grocery.MoreInformations);
 
@@ -142,8 +147,7 @@ namespace FridgeServer.Controllers
                 // editgrocery.MoreInformations = UpdateLifetimeanddate(editgrocery.MoreInformations,2);
                 var more = UpdateInformationsList(editgrocery.MoreInformations, false);
                 editgrocery.MoreInformations.Add(more);
-
-                /*
+              
                 db.Entry(grocery.MoreInformations).State = EntityState.Modified;
                 try
                 {
@@ -152,8 +156,7 @@ namespace FridgeServer.Controllers
                 catch (DbUpdateConcurrencyException)
                 {
                     throw;
-                }*/
-
+                }
                 db.Entry(editgrocery).State = EntityState.Modified;
                 try
                 {
@@ -455,7 +458,7 @@ namespace FridgeServer.Controllers
         }
 
 
-
+       
 
         //==================================================TESTs================================================//
         /*

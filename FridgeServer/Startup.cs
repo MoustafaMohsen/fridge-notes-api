@@ -13,6 +13,7 @@ using FridgeServer.Data;
 using Microsoft.AspNetCore;
 using FridgeServer.Services;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Data.Sqlite;
 
 namespace FridgeServer
 {
@@ -29,15 +30,45 @@ namespace FridgeServer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            var connection = @"Server=(localdb)\mssqllocaldb;Database=FridgeServer.AspNetCore.NewDb;Trusted_Connection=True;ConnectRetryCount=0";
+            //var connection = @"Server=sql.freeasphost.net\MSSQL2016;Database=husk_Items;uid=husk;pwd=thehiphusk;";
+            //var connection = @"Server=mysql6002.site4now.net;Database=db_a3cfc9_hiphusk;uid=a3cfc9_hiphusk;pwd=Thehiphusk@35628";
+            //var connection = @"Server=(localdb)\mssqllocaldb;Database=FridgeServer.AspNetCore.NewDb;Trusted_Connection=True;ConnectRetryCount=0";
+            //var connection = Configuration.GetConnectionString("DefaultConnection");
+
+            //=========Sql Server
+           
             services.AddDbContext<AppDbContext>(
                 options => {
-                    options.UseSqlServer(connection);
+                     options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+                    //options.UseSqlServer(connection);
                 }
             );
+            /*
+            //=========MySql
+
+            services.AddDbContext<AppDbContext>(
+                options => {
+                    options.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
+                    //options.UseSqlServer(connection);
+                }
+            );
+            */
+            //==========Sql Lite
+            /*
+            var connectionStringBuilder = new SqliteConnectionStringBuilder { DataSource = "MyDb.db" };
+            var connectionString = connectionStringBuilder.ToString();
+            var connection = new SqliteConnection(connectionString);
+
+            services.AddDbContext<AppDbContext>(
+                options => {
+                    options.UseSqlite(connection);
+                }
+            );
+            */
             services.AddTransient<GuessTimeout>();
             services.AddMvc();
         }
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
