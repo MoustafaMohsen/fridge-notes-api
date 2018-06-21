@@ -1,17 +1,44 @@
 ﻿#Name Mohesen 2018
 
-heroku container:login
-
-$appname = "linux-docker-4"
+$appname = "linux-docker-5"
 $imagename = "fridge-server"
+
+heroku container:login
 
 dotnet publish -c Release
 
 Copy-Item ".\Dockerfile" -Destination ".\bin\release\netcoreapp2.0\publish"
 
+#Confirmation dialogue
+$caption0 = "build Image"    
+$message0 = ''
+
+[int]$defaultChoice0 = 0
+$yes0 = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", "Push"
+$no0 = New-Object System.Management.Automation.Host.ChoiceDescription "&No", "Don't Push"
+$options0 = [System.Management.Automation.Host.ChoiceDescription[]]($yes0, $no0)
+$choiceRTN0 = $host.ui.PromptForChoice($caption0,$message0, $options0,$defaultChoice0)
+if ( $choiceRTN0 -ne 1 )
+{
 & docker build -t $imagename ./bin/release/netcoreapp2.0/publish
+}
+else
+{
+pause
+exit
+}
+
+echo '
+
+start image tagging'
 
 & docker tag $imagename registry.heroku.com/$appname/web
+& docker images registry.heroku.com/$appname/web
+
+echo '
+end image tagging
+'
+
 
 #Confirmation dialogue
 $caption1 = "Push Image"    
