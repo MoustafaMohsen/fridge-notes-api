@@ -30,11 +30,6 @@ namespace FridgeServer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //var connection = @"Server=sql.freeasphost.net\MSSQL2016;Database=husk_Items;uid=husk;pwd=thehiphusk;";
-            //var connection = @"Server=mysql6002.site4now.net;Database=db_a3cfc9_hiphusk;uid=a3cfc9_hiphusk;pwd=Thehiphusk@35628";
-            //var connection = @"Server=(localdb)\mssqllocaldb;Database=FridgeServer.AspNetCore.NewDb;Trusted_Connection=True;ConnectRetryCount=0";
-            //var connection = Configuration.GetConnectionString("DefaultConnection");
-
             //=========Sql Server
            
             services.AddDbContext<AppDbContext>(
