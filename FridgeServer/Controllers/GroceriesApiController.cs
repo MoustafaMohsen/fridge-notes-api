@@ -144,19 +144,9 @@ namespace FridgeServer.Controllers
 
                 editgrocery.Timeout = 0;
 
-                // editgrocery.MoreInformations = UpdateLifetimeanddate(editgrocery.MoreInformations,2);
                 var more = UpdateInformationsList(editgrocery.MoreInformations, false);
                 editgrocery.MoreInformations.Add(more);
-              
-                db.Entry(grocery.MoreInformations).State = EntityState.Modified;
-                try
-                {
-                    await db.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    throw;
-                }
+                editgrocery.groceryOrBought =false;
                 db.Entry(editgrocery).State = EntityState.Modified;
                 try
                 {
@@ -184,7 +174,7 @@ namespace FridgeServer.Controllers
 
                 var more = UpdateInformationsList(editgrocery.MoreInformations, true);
                 editgrocery.MoreInformations.Add(more);
-
+                editgrocery.groceryOrBought = true;
 
                 // grocery.MoreInformations[grocery.MoreInformations.Count - 1].MoreInformationsId = null;
 
