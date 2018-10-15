@@ -8,6 +8,7 @@ using FridgeServer.Models;
 using FridgeServer.Models.Dto;
 using FridgeServer.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -28,6 +29,7 @@ namespace FridgeServer.Controllers
             mapper = _mapper;
         }
         
+        //=======Admin Tools
         //Get all user
         [HttpGet]
         public IActionResult GetAll()
@@ -36,6 +38,7 @@ namespace FridgeServer.Controllers
             var usersDtos = mapper.Map<List<UserDto>>(users);
             return Ok(usersDtos);
         }
+
         //Get by id
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
@@ -45,13 +48,68 @@ namespace FridgeServer.Controllers
             return Ok(user);
         }
 
+        //Get all user
+        [HttpGet("FullUsers")]
+        public IActionResult GetFullUsers()
+        {
+            var users = userService.GetAll();
+            return Ok(users);
+        }
+        //Admin Tools=======
+
+
+        //Get User Id
+        [HttpGet("GetUserId")]
+        public IActionResult GetUserId()
+        {
+            var CurrentUserId =int.Parse( HttpContext.User.Identity.Name );
+            var user = userService.GetById(CurrentUserId);
+            return Ok(CurrentUserId );
+        }
+
+        //Create a friend
+        [HttpPost("addfriend")]
+        public IActionResult AddFreindToMe([FromBody]FriendRequestDto friendRequestDto)
+        {
+            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            friendRequestDto.userId = CurrentUserId;
+            try
+            {
+                userService.AddFreindToMe(friendRequestDto);
+                return Ok("added");
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(ex);
+            }
+        }
+
+        //generateinvitation
+        [HttpGet("generateinvitation")]
+        public IActionResult GenerateInv()
+        {
+            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            try
+            {
+                var invCode = userService.GenerateUserInvitaionCode(CurrentUserId);
+                return Ok(invCode);
+
+            }
+            catch (AppException ex)
+            {
+
+                return BadRequest(ex);
+            }
+            
+        }
 
         //Edit User
-        [HttpPut("{id}")]
-        public IActionResult UpdateUser(int id, UserDto userDto)
+        [HttpPut("editUser")]
+        public IActionResult UpdateUser(UserDto userDto)
         {
             var user = mapper.Map<User>(userDto);
-            user.id = id;
+            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            user.id = CurrentUserId;
             try
             {
                 var editeduser = userService.Update(user, userDto.password);
@@ -63,13 +121,14 @@ namespace FridgeServer.Controllers
             }
 
         }
-        //DeleteUser
-        [HttpDelete("{id}")]
-        public IActionResult DeleteUser(int id)
+        //Delete User
+        [HttpDelete("DeleteUser")]
+        public IActionResult DeleteUser()
         {
+            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
             try
             {
-                var editeduser = userService.Delete(id);
+                var editeduser = userService.Delete(CurrentUserId);
                 return Ok(editeduser);
             }
             catch (AppException ex)
@@ -93,7 +152,6 @@ namespace FridgeServer.Controllers
             GenerateDto.token = userService.GenerateUserToken(user.id,7);
             return Ok(GenerateDto);
         }
-
         [AllowAnonymous]
         [HttpPost("register")]
         public IActionResult RegisterUser([FromBody]UserDto userDto)

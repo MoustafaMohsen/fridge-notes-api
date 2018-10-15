@@ -13,25 +13,6 @@ namespace FridgeServer.Data
         {
         }
         
-        //Singletone constructor
-        public AppDbContext(DbContextOptions<AppDbContext> options,string connection)
-        {
-            connectionString = connection;
-        }
-        
-
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            // Used when initializing db context outside IoC (inversion of control)
-            if (connectionString != null)
-            {
-                var config = connectionString;
-                optionsBuilder.UseSqlite(config);
-            }
-
-            base.OnConfiguring(optionsBuilder);
-        }
 
         
         //DbSet

@@ -1,6 +1,7 @@
 ﻿using FridgeServer.Data;
 using FridgeServer.Helpers;
 using FridgeServer.Models;
+using FridgeServer.Models.Dto;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -23,17 +24,19 @@ namespace FridgeServer.Services
         User Delete(int id);
         string GenerateUserToken(int id, int ExpiresInDays);
         bool IsUserNameExistsInDb(string Username);
+        UserFriend AddFreindToMe(FriendRequestDto friendRequestDto);
+        string GenerateUserInvitaionCode(int id);
     }
-    public class UserService: IUserService
+    public class UserService : IUserService
     {
         private AppDbContext db;
         private AppSettings appSettings;
-        public UserService(IOptions<AppSettings> options,AppDbContext _db)
+        public UserService(IOptions<AppSettings> options, AppDbContext _db)
         {
             appSettings = options.Value;
             db = _db;
         }
-        public User Create(User usr,string password)
+        public User Create(User usr, string password)
         {
             if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(usr.username))
                 throw new AppException("Password or Username is Empty");
@@ -52,7 +55,7 @@ namespace FridgeServer.Services
             return AddedEntity.Entity;
         }
 
-        public User Authenticate(string username,string password)
+        public User Authenticate(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(username))
                 throw new AppException("Password or Username is Empty");
@@ -62,14 +65,6 @@ namespace FridgeServer.Services
             if (VerifyPasswordHash(password, user.passwordHash, user.passwordSalt) == false)
                 return null;
             return user;
-        }
-
-        public bool IsUserNameExistsInDb(string username)
-        {
-            var user = db.Users.FirstOrDefault(x => x.username == username);
-            if (user == null)
-                return false;
-            return true;
         }
 
         public User Update(User userParam, string password = null)
@@ -108,6 +103,50 @@ namespace FridgeServer.Services
             return DeleteEntitr.Entity;
 
         }
+
+        public UserFriend AddFreindToMe(FriendRequestDto friendRequestDto)
+        {
+            var invetationCode = friendRequestDto.invetationCode;
+            //Do logic to conver invetation code to code, for now no logic
+            //CHANGE LATER
+            var code = invetationCode;
+            var SecretId = EncryptionHelper.Decrypt(code);
+            var user = db.Users.FirstOrDefault(x => x.SecretId == SecretId);
+            if (user == null)
+                throw new AppException("Uesr not found");
+            var arefreinds = user.friends.Any(x => x.id == friendRequestDto.userId);
+            var friend = new UserFriend()
+            {
+                friendUsername = user.username,
+                friendEncryptedCode = code,
+                friendUserId = user.id,
+                AreFriends = arefreinds
+            };
+            AddFriend(friend, user.id);
+            return friend;
+        }
+
+        public User AddFriend(UserFriend friend, int friendId)
+        {
+            var user = db.Users.Find(friendId);
+            if (user == null)
+                throw new AppException("User not found");
+
+            user.friends.Add(friend);
+            var entity = db.Users.Update(user);
+            db.SaveChanges();
+            return entity.Entity;
+        }
+
+        public string GenerateUserInvitaionCode(int id)
+        {
+            var secret = db.Users.Find(id).SecretId;
+            var code = EncryptionHelper.Encrypt(secret);
+            //Do logic to conver invetation code to code, for now no logic
+            //CHANGE LATER
+            var invetationCode = code;
+            return invetationCode;
+        }
         //Get all users
         public IEnumerable<User> GetAll()
         {
@@ -117,6 +156,14 @@ namespace FridgeServer.Services
         public User GetById(int id)
         {
             return db.Users.Find(id);
+        }
+
+        public bool IsUserNameExistsInDb(string username)
+        {
+            var user = db.Users.FirstOrDefault(x => x.username == username);
+            if (user == null)
+                return false;
+            return true;
         }
 
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
@@ -156,7 +203,7 @@ namespace FridgeServer.Services
 
             var TokenDescriptor = new SecurityTokenDescriptor()
             {
-                Subject = new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.Name, id.ToString()) }),
+                Subject = new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.Name, id.ToString()), new Claim(ClaimTypes.NameIdentifier, id.ToString()) }),
                 Expires = DateTime.UtcNow.AddDays(ExpiresInDays),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Key) ,SecurityAlgorithms.HmacSha256Signature)
                 
