@@ -18,7 +18,6 @@ namespace FridgeServer.Controllers
     public class GroceriesApiController : Controller
     {
         
-          
         private readonly AppDbContext db;
         private  GuessTimeout guessTimeout;
         private const string passedValidation = "passed Validation";
@@ -27,7 +26,6 @@ namespace FridgeServer.Controllers
             db = context;
             guessTimeout = _guessTimeout;
         }
-        
 
         /// <summary>
         /// BASE : "api/GroceriesApi"
@@ -45,7 +43,6 @@ namespace FridgeServer.Controllers
         /// Guess Timeout : "guess/{id}"
         /// </summary>
 
-            
 
         //============ Request Handlers ===========//
 
@@ -75,8 +72,6 @@ namespace FridgeServer.Controllers
 
             return Ok(grocery);
         }
-
-        
 
         //===== Updates
         // PUT
@@ -312,7 +307,6 @@ namespace FridgeServer.Controllers
             return Content("" + HandleTimeout(grocery, 0));
         }
 
-
         //============ Helper Methods ===========//
         private bool GroceryExistsId(int id)
         {
@@ -447,29 +441,6 @@ namespace FridgeServer.Controllers
             return false;
         }
 
-
-       
-
-        //==================================================TESTs================================================//
-        /*
-
-        [Route("TestPost/{id}/")]
-        [Route("TestPost/{id}/{timeout}")]
-        [HttpGet]
-        public  IActionResult test(int id,long timeout=0)
-        {
-           
-            return Content(passedValidation);
-        }
-
-        //TEst Rout
-        [Route("Test2")]
-        [HttpGet]
-        public string Get2()
-        {
-            return db.Grocery.ToList().ToString();
-        }
-        */
 
     }//class
 

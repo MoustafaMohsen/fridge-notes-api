@@ -12,8 +12,6 @@ namespace FridgeServer.Data
         public AppDbContext(DbContextOptions<AppDbContext>  options) : base(options)
         {
         }
-
-        
         
         //Singletone constructor
         public AppDbContext(DbContextOptions<AppDbContext> options,string connection)
@@ -32,19 +30,13 @@ namespace FridgeServer.Data
                 optionsBuilder.UseSqlite(config);
             }
 
-           // optionsBuilder.UseSqlServer(config);
             base.OnConfiguring(optionsBuilder);
         }
 
         
-        /*
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlite("Data Source=blogging.db");
-        }
-        */
         //DbSet
 
+        public DbSet<User> Users { get; set; }
         public DbSet<Grocery> Grocery { get; set; }
         public DbSet<MoreInformations> MoreInformations { get; set; }
 
