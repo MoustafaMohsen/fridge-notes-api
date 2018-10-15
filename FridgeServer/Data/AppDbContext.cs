@@ -29,7 +29,7 @@ namespace FridgeServer.Data
             if (connectionString != null)
             {
                 var config = connectionString;
-                optionsBuilder.UseSqlServer(config);
+                optionsBuilder.UseSqlite(config);
             }
 
            // optionsBuilder.UseSqlServer(config);
