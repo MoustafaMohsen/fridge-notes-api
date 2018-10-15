@@ -11,6 +11,12 @@ using Microsoft.Extensions.DependencyInjection;
 using FridgeServer.Data;
 using FridgeServer.Services;
 using Microsoft.EntityFrameworkCore;
+using FridgeServer.Helpers;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Threading.Tasks;
+using AutoMapper;
 /*
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -34,36 +40,63 @@ namespace FridgeServer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors();
+            services.AddAutoMapper();
             //=========Sql Server
-           
             services.AddDbContext<AppDbContext>(
                 options => {
                     //Check AppContext if Edited
                     options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
                 }
             );
-            /*
-            //=========MySql
 
-            services.AddDbContext<AppDbContext>(
-                options => {
-                    options.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
-                    //options.UseSqlServer(connection);
-                }
-            );
-            */
-            //==========Sql Lite
-            /*
-            var connectionStringBuilder = new SqliteConnectionStringBuilder { DataSource = "MyDb.db" };
-            var connectionString = connectionStringBuilder.ToString();
-            var connection = new SqliteConnection(connectionString);
+            //configure strongly typed settings objects
+            var appSettingsSection = Configuration.GetSection("AppSettings");
+            //Add configration
+            services.Configure<AppSettings>(appSettingsSection);
 
-            services.AddDbContext<AppDbContext>(
-                options => {
-                    options.UseSqlite(connection);
-                }
-            );
-            */
+
+            //====configure jwt authentication
+
+            //Get Key
+            var appSetting = appSettingsSection.Get<AppSettings>();
+            var Key = Encoding.ASCII.GetBytes(appSetting.Secret);
+
+
+            services.AddAuthentication(x =>
+            {
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(x =>
+            {
+                x.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
+                        var userId = int.Parse(context.Principal.Identity.Name);
+                        var user = userService.GetById(userId);
+                        if (user == null)
+                        {
+                            // return unauthorized if user no longer exists
+                            context.Fail("Unauthorized");
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+                x.RequireHttpsMetadata = false;
+                x.SaveToken = true;
+                x.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                };
+            });
+
+            services.AddScoped<IUserService, UserService>();
             services.AddTransient<GuessTimeout>();
             services.AddMvc();
         }
@@ -79,6 +112,7 @@ namespace FridgeServer
                 app.UseDeveloperExceptionPage();
                 app.UseDatabaseErrorPage();
             }
+            app.UseAuthentication();
             app.UseMvc();
         }
     }
