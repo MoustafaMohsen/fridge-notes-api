@@ -1,19 +1,23 @@
-﻿using System;
+﻿/*
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+*/
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using FridgeServer.Data;
+using FridgeServer.Services;
+using Microsoft.EntityFrameworkCore;
+/*
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
-using FridgeServer.Data;
 using Microsoft.AspNetCore;
-using FridgeServer.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Data.Sqlite;
+*/
 
 namespace FridgeServer
 {
@@ -34,8 +38,8 @@ namespace FridgeServer
            
             services.AddDbContext<AppDbContext>(
                 options => {
-                     options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
-                    //options.UseSqlServer(connection);
+                    //Check AppContext if Edited
+                    options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
                 }
             );
             /*
@@ -71,7 +75,7 @@ namespace FridgeServer
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().AllowCredentials());
             if (env.IsDevelopment())
             {
-                app.UseBrowserLink();
+                //app.UseBrowserLink();
                 app.UseDeveloperExceptionPage();
                 app.UseDatabaseErrorPage();
             }
