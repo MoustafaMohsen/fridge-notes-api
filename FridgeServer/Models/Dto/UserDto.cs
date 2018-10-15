@@ -14,4 +14,10 @@ namespace FridgeServer.Models.Dto
         public string password { get; set; }
         public string token { get; set; }
     }
+    public class FriendRequestDto
+    {
+        public string invetationCode { get; set; }
+        public int userId { get; set; }
+
+    }
 }

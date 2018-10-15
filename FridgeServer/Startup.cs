@@ -46,7 +46,8 @@ namespace FridgeServer
             services.AddDbContext<AppDbContext>(
                 options => {
                     //Check AppContext if Edited
-                    options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
+                    //options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
+                    options.UseInMemoryDatabase("testDb");
                 }
             );
 
