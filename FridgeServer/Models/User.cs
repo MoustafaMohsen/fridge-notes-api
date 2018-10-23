@@ -15,9 +15,9 @@ namespace FridgeServer.Models
         public byte[] passwordHash { get; set; }
         public byte[] passwordSalt { get; set; }
 
-        public string SecretId { get; set; }
-        public List<Grocery> UserGroceries { get; set; }
-        public List<UserFriend> friends { get; set; }
+        public string secretId { get; set; }
+        public List<Grocery> userGroceries { get; set; }
+        public List<UserFriend> userFriends { get; set; }
     }
     public class UserFriend
     {
@@ -26,5 +26,7 @@ namespace FridgeServer.Models
         public int friendUserId { get; set; }
         public string friendEncryptedCode { get; set; }
         public bool AreFriends { get; set; }
+
+        public int Userid { get; set; }
     }
 }

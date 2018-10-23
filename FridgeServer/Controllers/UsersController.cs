@@ -18,7 +18,7 @@ namespace FridgeServer.Controllers
 
     [Authorize]
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class UsersController : Controller
     {
         private IUserService userService;
@@ -55,6 +55,21 @@ namespace FridgeServer.Controllers
             var users = userService.GetAll();
             return Ok(users);
         }
+
+        //Delete User
+        [HttpDelete("DeleteUser/{id}")]
+        public IActionResult DeleteUserById(int id)
+        {
+            try
+            {
+                var editeduser = userService.Delete(id);
+                return Ok(editeduser);
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(new { message = ex.Message, Exeption = ex });
+            }
+        }
         //Admin Tools=======
 
 
@@ -64,7 +79,18 @@ namespace FridgeServer.Controllers
         {
             var CurrentUserId =int.Parse( HttpContext.User.Identity.Name );
             var user = userService.GetById(CurrentUserId);
-            return Ok(CurrentUserId );
+            if (user==null)
+            {
+                return BadRequest("User doesn't Exsists");
+            }
+            var dtoUser = mapper.Map<UserDto>(user);
+            dtoUser.token = userService.GenerateUserToken(user.id, 7); ;
+            var response = new ResponseDto()
+            {
+                value = dtoUser,
+                statusText = "Done"
+            };
+            return Ok(response);
         }
 
         //Create a friend
@@ -75,8 +101,33 @@ namespace FridgeServer.Controllers
             friendRequestDto.userId = CurrentUserId;
             try
             {
-                userService.AddFreindToMe(friendRequestDto);
-                return Ok("added");
+                var response = new ResponseDto()
+                {
+                    value = userService.AddFreindToMe(friendRequestDto),
+                    statusText = "added"
+                };
+                return Ok(response);
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(ex);
+            }
+        }
+
+        //Delete a friend
+        [HttpPost("deletefriendship")]
+        public IActionResult DeleteFriendship([FromBody]FriendRequestDto friendRequestDto)
+        {
+            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            friendRequestDto.userId = CurrentUserId;
+            try
+            {
+                var response = new ResponseDto()
+                {
+                    value = userService.DeleteFriendship(friendRequestDto),
+                    statusText = "deletet"
+                };
+                return Ok(response);
             }
             catch (AppException ex)
             {
@@ -92,7 +143,8 @@ namespace FridgeServer.Controllers
             try
             {
                 var invCode = userService.GenerateUserInvitaionCode(CurrentUserId);
-                return Ok(invCode);
+                var response = new ResponseDto() { statusText = "Generated", value = invCode };
+                return Ok(response);
 
             }
             catch (AppException ex)
@@ -150,6 +202,7 @@ namespace FridgeServer.Controllers
             //If user found
             var GenerateDto = mapper.Map<UserDto>(user);
             GenerateDto.token = userService.GenerateUserToken(user.id,7);
+            GenerateDto.invitationcode = EncryptionHelper.Encrypt(user.secretId);
             return Ok(GenerateDto);
         }
         [AllowAnonymous]
@@ -159,8 +212,11 @@ namespace FridgeServer.Controllers
             var user = mapper.Map<User>(userDto);
             try
             {
-                var AddedUser = userService.Create(user, userDto.password);
-                return Ok(AddedUser);
+                var registerdUser = userService.Create(user, userDto.password);
+                var returndto = mapper.Map<UserDto>(registerdUser);
+                returndto.token= userService.GenerateUserToken(user.id, 7);
+
+                return Ok(returndto);
             }
             catch (AppException ex)
             {

@@ -12,12 +12,12 @@ namespace FridgeServer.Services
 
     public class GuessTimeout
     {
-        private AppDbContext db;
-        public GuessTimeout(AppDbContext _db)
+        //private AppDbContext db;
+        public GuessTimeout(/*AppDbContext _db*/)
         {
-            db = _db;
+          //  db = _db;
         }
-
+        /*
         public  long GuessById(int id)
         {
             //getting Moreinformatio List
@@ -39,10 +39,10 @@ namespace FridgeServer.Services
             }
 
             return Guessingmath(lifeTimes);        
-        }
+        }*/
 
 
-        public long GuessByInformation(List<MoreInformations> more)
+        public long GuessByInformation(List<MoreInformation> more)
         {
 
             //Convert Moreinformatio To lifetimes&No
@@ -52,13 +52,13 @@ namespace FridgeServer.Services
             lifetimeList ArrayHolder;
             foreach (var item in more)//extracting the lifetimes only
             {
-                var HoldLifeTime = item?.LifeTime==null? 0: item.LifeTime;
-                var HoldNo = item?.No==null?0:item.No;
+                var HoldLifeTime = item?.lifeTime==null? 0: item.lifeTime;
+                var HoldNo = item?.no == null?0:item.no;
                 ArrayHolder = new lifetimeList()
                 {
                     LifeTime = (long)HoldLifeTime,
-                    No = (int)item.No,
-                    bought = item.Bought,
+                    No = (int)item.no,
+                    bought = item.bought,
                     typeOfNo=item.typeOfNo
                 };
                 lifeTimes.Add(ArrayHolder);
