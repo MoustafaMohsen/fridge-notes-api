@@ -15,6 +15,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Migrations\20181017142223_Initial.cs" />
+    <Compile Remove="Migrations\20181017142223_Initial.Designer.cs" />
+    <Compile Remove="Migrations\20181017155626_sportTest_1.cs" />
+    <Compile Remove="Migrations\20181017155626_sportTest_1.Designer.cs" />
+    <Compile Remove="Migrations\20181018050004_sportsTest_1.cs" />
+    <Compile Remove="Migrations\20181018050004_sportsTest_1.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="5.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="2.1.1" />

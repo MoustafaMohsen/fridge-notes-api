@@ -11,30 +11,67 @@ namespace FridgeServer.Models
     public class Grocery
     {
         [Key]
-        public int Id { get; set; }
+        public int id { get; set; }
         [Required]
-        public string Name { get; set; }
-        public List<MoreInformations> MoreInformations { get; set; } = new List<MoreInformations>() { };
+        public string name { get; set; }
+        public List<MoreInformation> moreInformations { get; set; } = new List<MoreInformation>() { };
         [Required]
         public bool basic { get; set; } = false;
         //basic only
-        public long? Timeout { get; set; }//current Lifetime of the item
+        public long? timeout { get; set; }//current Lifetime of the item
 
         public bool groceryOrBought { get; set; } = false; // false = Need / true=Bought
+        public string owner { get; set; }
 
+        public int Userid { get; set; }
     }
 
 
-    public class MoreInformations
+    public class MoreInformation
     {
-        public int MoreInformationsId { get; set; }
-        public long? Date { get; set; }// = (long)Alarm.DateTimeToUnixTime(DateTime.Now);  //the date in which the item have been bought or added/Needed to note
-        public bool Bought { get; set; } = false; // false = Need / true=Bought
-        public long? LifeTime { get; set; } = 0;//the lifetime number
+        public int id { get; set; }
+        public long? date { get; set; }// = (long)Alarm.DateTimeToUnixTime(DateTime.Now);  //the date in which the item have been bought or added/Needed to note
+        public bool bought { get; set; } = false; // false = Need / true=Bought
+        public long? lifeTime { get; set; } = 0;//the lifetime number
         //Details
-        public int? No { get; set; } = 1;
+        public int? no { get; set; } = 1;
         public string typeOfNo { get; set; }
+
+        public int Groceryid { get; set; }
     }
 
 
+
+    public class Sport
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public List<League> leagues { get; set; }
+    }
+    public class League
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public string description { get; set; }
+        public List<Team> teams { get; set; }
+
+        public int Sportid { get; set; }
+    }
+    public class Team
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public string successrate { get; set; }
+        public List<Player> players { get; set; }
+
+        public int Leagueid { get; set; }
+    }
+    public class Player
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public int age { get; set; }
+
+        public int Teamid { get; set; }
+    }
 }

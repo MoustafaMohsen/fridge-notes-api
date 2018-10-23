@@ -2,6 +2,7 @@
 using FridgeServer.Helpers;
 using FridgeServer.Models;
 using FridgeServer.Models.Dto;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -24,8 +25,10 @@ namespace FridgeServer.Services
         User Delete(int id);
         string GenerateUserToken(int id, int ExpiresInDays);
         bool IsUserNameExistsInDb(string Username);
-        UserFriend AddFreindToMe(FriendRequestDto friendRequestDto);
+        object AddFreindToMe(FriendRequestDto friendRequestDto);
+        object DeleteFriendship(FriendRequestDto friendRequestDto);
         string GenerateUserInvitaionCode(int id);
+        int? IdValidation(int userId, int GevenId);
     }
     public class UserService : IUserService
     {
@@ -48,7 +51,8 @@ namespace FridgeServer.Services
             CreatePasswordHash(password, out PasswordHash, out PasswordSalt);
             usr.passwordHash = PasswordHash;
             usr.passwordSalt = PasswordSalt;
-            usr.SecretId = RandomString(8);
+            usr.secretId = RandomString(8);
+            usr.userGroceries = new List<Grocery>();
 
             var AddedEntity = db.Users.Add(usr);
             db.SaveChanges();
@@ -59,7 +63,7 @@ namespace FridgeServer.Services
         {
             if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(username))
                 throw new AppException("Password or Username is Empty");
-            var user = db.Users.FirstOrDefault(x => x.username == username);
+            var user = db.Users.Include("userFriends").FirstOrDefault(x => x.username == username);
             if (user == null)
                 return null;
             if (VerifyPasswordHash(password, user.passwordHash, user.passwordSalt) == false)
@@ -73,13 +77,17 @@ namespace FridgeServer.Services
 
             //If username has Changed
             if (user.username != userParam.username)
-            {
+            {   //Don't Allow username Changes (for now)
+                throw new AppException("username " + user.username + " AlreadyTaken");
+
                 if (IsUserNameExistsInDb(userParam.username))
                     throw new AppException("username " + user.username + " AlreadyTaken");
+
             }
-            user.username = userParam.username;
+            //user.username = userParam.username;
             user.firstname = userParam.firstname;
             user.lastname = userParam.lastname;
+
             //If password was entred
             if (!string.IsNullOrWhiteSpace(password))
             {
@@ -104,44 +112,153 @@ namespace FridgeServer.Services
 
         }
 
-        public UserFriend AddFreindToMe(FriendRequestDto friendRequestDto)
+        public object AddFreindToMe(FriendRequestDto friendRequestDto)
         {
             var invetationCode = friendRequestDto.invetationCode;
+
             //Do logic to conver invetation code to code, for now no logic
             //CHANGE LATER
-            var code = invetationCode;
-            var SecretId = EncryptionHelper.Decrypt(code);
-            var user = db.Users.FirstOrDefault(x => x.SecretId == SecretId);
-            if (user == null)
-                throw new AppException("Uesr not found");
-            var arefreinds = user.friends.Any(x => x.id == friendRequestDto.userId);
-            var friend = new UserFriend()
-            {
-                friendUsername = user.username,
-                friendEncryptedCode = code,
-                friendUserId = user.id,
-                AreFriends = arefreinds
-            };
-            AddFriend(friend, user.id);
-            return friend;
+            var SecretId = invetationCode;//EncryptionHelper.Decrypt(code);
+            var friend = db.Users.Include("userFriends").FirstOrDefault(x => x.secretId == SecretId);
+            if (friend == null)
+                throw new AppException("User not found");
+            if (friend.id == friendRequestDto.userId)
+                throw new AppException("Not Valid");
+
+            //if friend already added you
+            if( friend.userFriends.Any(x=>x.friendUserId==friendRequestDto.userId) )
+                throw new AppException("Friend already added you");
+
+            var objectFriends =AddFriendsToEachothers(friend.id,friendRequestDto.userId);
+            return objectFriends;
         }
 
-        public User AddFriend(UserFriend friend, int friendId)
+        public object AddFriendsToEachothers(int idA,int idB)
         {
-            var user = db.Users.Find(friendId);
-            if (user == null)
+            var userA = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idA);
+            var userB = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idB);
+            if (userA == null)
+                throw new AppException("User not found");
+            if (userB == null)
                 throw new AppException("User not found");
 
-            user.friends.Add(friend);
-            var entity = db.Users.Update(user);
+            var codeA = userA.secretId;
+            var codeB = userB.secretId;
+            // if friend
+            if (userA.userFriends.Any(f => f.friendUserId == idB))
+            {
+                throw new AppException("already added");
+            }
+
+            if (userB.userFriends.Any(f => f.friendUserId == idA))
+            {
+                throw new AppException("already added");
+            }
+
+
+            var UserAFriendObject = new UserFriend()
+            {
+                friendUsername = userA.username,
+                friendEncryptedCode = codeA,
+                friendUserId = userA.id,
+                AreFriends = true
+            };
+
+
+            var UserBFriendObject = new UserFriend()
+            {
+                friendUsername = userB.username,
+                friendEncryptedCode = codeB,
+                friendUserId = userB.id,
+                AreFriends = true
+            };
+
+            userA.userFriends.Add(UserBFriendObject);
+            var entityA=db.Users.Update(userA);
+
+            userB.userFriends.Add(UserAFriendObject);
+            var entityB=db.Users.Update(userB);
+
             db.SaveChanges();
-            return entity.Entity;
+
+            return new { objectA = entityA.Entity, objectB = entityB.Entity };
         }
 
+        public object DeleteFriendship(FriendRequestDto friendRequestDto)
+        {
+            var invetationCode = friendRequestDto.invetationCode;
+
+            //Do logic to conver invetation code to code, for now no logic
+            //CHANGE LATER
+            var SecretId = invetationCode;//EncryptionHelper.Decrypt(code);
+            var friend = db.Users.Include("userFriends").FirstOrDefault(x => x.secretId == SecretId);
+            if (friend == null)
+                throw new AppException("User not found");
+            if (friend.id == friendRequestDto.userId)
+                throw new AppException("Not Valid");
+
+            //if friend did not add you
+            if ( !friend.userFriends.Any(x => x.friendUserId == friendRequestDto.userId))
+                throw new AppException("None Existent");
+
+
+            var objectFriends = DeleteFriendsToEachothers(friend.id, friendRequestDto.userId);
+            return objectFriends;
+        }
+        public object DeleteFriendsToEachothers(int idA, int idB)
+        {
+            var userA = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idA);
+            var userB = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idB);
+            if (userA == null)
+                throw new AppException("User not found");
+            if (userB == null)
+                throw new AppException("User not found");
+
+            var codeA = userA.secretId;
+            var codeB = userB.secretId;
+            // if friend
+            var ObjectBinUserA = userA.userFriends.FirstOrDefault(f=>f.friendUserId == idB);
+            var ObjectAinUserB = userB.userFriends.FirstOrDefault(f=>f.friendUserId == idA);
+
+            if (ObjectBinUserA == null)
+            {
+                throw new AppException("not found");
+            }
+
+            if (ObjectAinUserB == null)
+            {
+                throw new AppException("not found");
+            }
+
+
+            userA.userFriends.Remove(ObjectBinUserA);
+            var entityA = db.Users.Update(userA);
+
+            userB.userFriends.Remove(ObjectAinUserB);
+            var entityB = db.Users.Update(userB);
+
+            db.SaveChanges();
+
+            return new { objectA = entityA.Entity, objectB = entityB.Entity };
+        }
+        public int? IdValidation(int userId,int GevenId)
+        {
+            var user = GetById(userId);
+            int? returnid = null;
+            for (int i = 0; i < user.userFriends.Count; i++)
+            {
+                var friend = user.userFriends[i];
+                if (friend.friendUserId == GevenId)
+                {
+                    returnid = friend.friendUserId;
+                }
+            }
+            return returnid;
+        }
         public string GenerateUserInvitaionCode(int id)
         {
-            var secret = db.Users.Find(id).SecretId;
-            var code = EncryptionHelper.Encrypt(secret);
+            var secret = db.Users.Find(id).secretId;
+            var code = secret;// EncryptionHelper.Encrypt(secret);
             //Do logic to conver invetation code to code, for now no logic
             //CHANGE LATER
             var invetationCode = code;
@@ -155,7 +272,7 @@ namespace FridgeServer.Services
 
         public User GetById(int id)
         {
-            return db.Users.Find(id);
+            return db.Users.Include("userFriends").FirstOrDefault(x => x.id == id);
         }
 
         public bool IsUserNameExistsInDb(string username)

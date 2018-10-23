@@ -40,14 +40,14 @@ namespace FridgeServer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors();
             services.AddAutoMapper();
             //=========Sql Server
             services.AddDbContext<AppDbContext>(
                 options => {
                     //Check AppContext if Edited
                     //options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
-                    options.UseInMemoryDatabase("testDb");
+                    //options.UseInMemoryDatabase("testDb");
+                    options.UseSqlServer(Configuration.GetConnectionString("BloggingDatabase"));
                 }
             );
 
@@ -97,9 +97,11 @@ namespace FridgeServer
                 };
             });
 
+            services.AddScoped< IGroceriesService, GroceriesService>();
             services.AddScoped<IUserService, UserService>();
             services.AddTransient<GuessTimeout>();
             services.AddMvc();
+            services.AddCors();
         }
 
 

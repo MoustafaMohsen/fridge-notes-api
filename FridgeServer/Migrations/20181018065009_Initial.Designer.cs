@@ -4,14 +4,16 @@ using FridgeServer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FridgeServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20181018065009_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,7 +27,7 @@ namespace FridgeServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<int>("Userid");
+                    b.Property<int?>("Userid");
 
                     b.Property<bool>("basic");
 
@@ -34,7 +36,7 @@ namespace FridgeServer.Migrations
                     b.Property<string>("name")
                         .IsRequired();
 
-                    b.Property<string>("owner");
+                    b.Property<int>("owner");
 
                     b.Property<long?>("timeout");
 
@@ -101,7 +103,7 @@ namespace FridgeServer.Migrations
 
                     b.Property<bool>("AreFriends");
 
-                    b.Property<int>("Userid");
+                    b.Property<int?>("Userid");
 
                     b.Property<string>("friendEncryptedCode");
 
@@ -113,15 +115,14 @@ namespace FridgeServer.Migrations
 
                     b.HasIndex("Userid");
 
-                    b.ToTable("userFriends");
+                    b.ToTable("UserFriend");
                 });
 
             modelBuilder.Entity("FridgeServer.Models.Grocery", b =>
                 {
                     b.HasOne("FridgeServer.Models.User")
                         .WithMany("userGroceries")
-                        .HasForeignKey("Userid")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("Userid");
                 });
 
             modelBuilder.Entity("FridgeServer.Models.MoreInformation", b =>
@@ -135,9 +136,8 @@ namespace FridgeServer.Migrations
             modelBuilder.Entity("FridgeServer.Models.UserFriend", b =>
                 {
                     b.HasOne("FridgeServer.Models.User")
-                        .WithMany("userFriends")
-                        .HasForeignKey("Userid")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .WithMany("friends")
+                        .HasForeignKey("Userid");
                 });
 #pragma warning restore 612, 618
         }
