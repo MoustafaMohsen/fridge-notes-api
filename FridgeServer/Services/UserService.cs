@@ -20,6 +20,7 @@ namespace FridgeServer.Services
         User Authenticate(string username, string password);
         IEnumerable<User> GetAll();
         User GetById(int id);
+        User FindById(int id);
         User Create(User user, string password);
         User Update(User user, string password = null);
         User Delete(int id);
@@ -273,6 +274,11 @@ namespace FridgeServer.Services
         public User GetById(int id)
         {
             return db.Users.Include("userFriends").FirstOrDefault(x => x.id == id);
+        }
+
+        public User FindById(int id)
+        {
+            return db.Users.Find(id);
         }
 
         public bool IsUserNameExistsInDb(string username)

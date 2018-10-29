@@ -1,10 +1,4 @@
-﻿/*
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-*/
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,13 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Threading.Tasks;
 using AutoMapper;
-/*
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Data.Sqlite;
-*/
+
 
 namespace FridgeServer
 {
@@ -47,7 +35,7 @@ namespace FridgeServer
                     //Check AppContext if Edited
                     //options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
                     //options.UseInMemoryDatabase("testDb");
-                    options.UseSqlServer(Configuration.GetConnectionString("BloggingDatabase"));
+                    options.UseSqlServer(Configuration.GetConnectionString("LocalSqlServer"));
                 }
             );
 
@@ -56,13 +44,10 @@ namespace FridgeServer
             //Add configration
             services.Configure<AppSettings>(appSettingsSection);
 
-
             //====configure jwt authentication
-
             //Get Key
             var appSetting = appSettingsSection.Get<AppSettings>();
             var Key = Encoding.ASCII.GetBytes(appSetting.Secret);
-
 
             services.AddAuthentication(x =>
             {
@@ -77,7 +62,7 @@ namespace FridgeServer
                     {
                         var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
                         var userId = int.Parse(context.Principal.Identity.Name);
-                        var user = userService.GetById(userId);
+                        var user = userService.FindById(userId);
                         if (user == null)
                         {
                             // return unauthorized if user no longer exists

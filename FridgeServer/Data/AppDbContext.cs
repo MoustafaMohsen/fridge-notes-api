@@ -6,9 +6,6 @@ namespace FridgeServer.Data
 {
     public class AppDbContext : DbContext
     {
-
-        private string connectionString;
-
         //Scoped constructor
         public AppDbContext(DbContextOptions<AppDbContext>  options) : base(options)
         {
@@ -20,9 +17,7 @@ namespace FridgeServer.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Grocery> userGroceries { get; set; }
         public DbSet<MoreInformation> moreInformations { get; set; }
-
         public DbSet<UserFriend> userFriends { get; set; }
-        //public DbSet<Sport> sports { get; set; }
 
     }//class
 }

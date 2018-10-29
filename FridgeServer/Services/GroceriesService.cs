@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace FridgeServer.Services
 {
@@ -21,7 +20,6 @@ namespace FridgeServer.Services
         string deletegrocery(Grocery grocery, int id);
         string guessgrocery(Grocery grocery);
         bool GroceryExistsName(string name, int id);
-        Sport SportsGetAll();
 
     }
     public class GroceriesService : IGroceriesService
@@ -123,9 +121,11 @@ namespace FridgeServer.Services
 
             var queryable = db.Users.Find(id);
             grocery.owner = queryable.firstname;
+            grocery.ownerid = queryable.id;
             queryable.userGroceries = new List<Grocery>();
             queryable.userGroceries.Add(grocery);
-            
+
+
             var userEntity = db.Users.Update(queryable);
             //db.Entry(queryable).State = EntityState.Modified;
             db.SaveChanges();
@@ -152,7 +152,7 @@ namespace FridgeServer.Services
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw;
+                throw new AppException("DbUpdateConcurrencyException");
             }
             return ;
         }
@@ -166,15 +166,10 @@ namespace FridgeServer.Services
             editgrocery.timeout = HandleTimeout(editgrocery, grocery.timeout);
 
 
-            //  grocery.moreInformations = UpdateLifetimeanddate(grocery.moreInformations,2);
 
             var more = UpdateInformationsList(editgrocery.moreInformations, true);
             editgrocery.moreInformations.Add(more);
             editgrocery.groceryOrBought = true;
-
-            // grocery.moreInformations[grocery.moreInformations.Count - 1].moreInformationsId = null;
-
-            //queryUser.userGroceries.Add(editgrocery);
             db.Entry(editgrocery).State = EntityState.Modified;
             try
             {
@@ -182,20 +177,21 @@ namespace FridgeServer.Services
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw;
+                throw new AppException("DbUpdateConcurrencyException");
             }
             return "bought";
-            // return CreatedAtAction("GetGrocery", new { id = grocery.Id }, grocery);
         }
 
         public string editgrocery(Grocery grocery, int userid)
         {
             var editgrocery = GetSpecificGroceryForUser(grocery.id, userid);
 
-            if (editgrocery == null)
-                throw new AppException("Not found");
+            if (editgrocery == null) throw new AppException("Not found");
+            editgrocery.basic= grocery.basic;
+            editgrocery.groceryOrBought= grocery.groceryOrBought;
+            editgrocery.name= grocery.name;
+            editgrocery.timeout= grocery.timeout;
 
-            //queryUser.userGroceries.Add(editgrocery);
             db.Entry(editgrocery).State = EntityState.Modified;
 
             try
@@ -210,7 +206,7 @@ namespace FridgeServer.Services
                 }
                 else
                 {
-                    throw;
+                    throw new AppException("Not found");
                 }
             }
             return "edited";
@@ -228,8 +224,8 @@ namespace FridgeServer.Services
             {
                 return "Item has to be Deleted";
             }
-
             removegrocery.moreInformations.RemoveAt(grocery.moreInformations.Count - 1);
+            removegrocery.groceryOrBought = removegrocery.moreInformations.Last().bought;
 
             //edit
             db.Entry(removegrocery).State = EntityState.Modified;
@@ -241,11 +237,9 @@ namespace FridgeServer.Services
             catch (DbUpdateConcurrencyException)
             {
 
-                throw;
+                throw new AppException("DbUpdateConcurrencyException");
             }
             return "Ok";
-
-            // return CreatedAtAction("GetGrocery", new { id = grocery.Id }, grocery);
         }
 
         public string deletegrocery(Grocery grocery, int userid)
@@ -266,7 +260,7 @@ namespace FridgeServer.Services
             }
             catch (DbUpdateConcurrencyException)
             {
-                throw;
+                throw new AppException("DbUpdateConcurrencyException");
             }
 
         }
@@ -275,22 +269,19 @@ namespace FridgeServer.Services
         {
             if (MoreisNullOrEmpty(grocery?.moreInformations))
             {
-                return "Null Or Empty";
+                throw new AppException("Null Or Empty");
             }
             return "" + HandleTimeout(grocery, 0);
         }
 
         public bool GroceryExistsName(string name,int id)
         {
-            if (string.IsNullOrEmpty(name))
-                return true;
-
+            if (string.IsNullOrEmpty(name)) return true;
             return db.Users.Any(u => u.id == id && u.userGroceries.Any(e => e.name.ToLower() == name.ToLower()));
-            
-
         }
 
-        //============ Helper Methods ===========//
+
+        //============ Private Methods ===========//
         private User GetFullUser(int id)
         {
             var user = db.Users
@@ -327,12 +318,11 @@ namespace FridgeServer.Services
             return groceries;
         }
 
-
         private bool GroceryExistsId(int Groceryid, int id)
         {
             return db.Users.Any(u => u.id == id && u.userGroceries.Any(e => e.id == Groceryid ));
-
         }
+
         private long HandleTimeout(Grocery grocery, long? timeout)
         {
             if ((timeout <= 0) || timeout == null)//if no timeout or invalid
@@ -345,11 +335,12 @@ namespace FridgeServer.Services
                 return (long)timeout;//+ (long)Alarm.DateTimeToUnixTime(DateTime.Now); ;
             }
         }
+
         private List<MoreInformation> UpdateLifetimeanddate(List<MoreInformation> more, int lastDateBy = 1)
         {
             int HoldNo = (int)more.Last().no;
             string HoldtypeOfNo = more.Last().typeOfNo;
-            var now = (long)Alarm.DateTimeToUnixTime(DateTime.Now);
+            var now = (long)M.DateTimeToUnixTime(DateTime.Now);
             long HoldLastDate = (long)more[more.Count - lastDateBy].date;
 
             MoreInformation listUpdate = new MoreInformation()
@@ -363,32 +354,33 @@ namespace FridgeServer.Services
 
             return replaceLast(more, listUpdate);
         }
+
         private List<MoreInformation> replaceLast(List<MoreInformation> more, MoreInformation listUpdate)
         {
             try
             {
                 more[more.Count - 1] = listUpdate;
-
                 return more;
             }
-            catch (Exception) { throw; }
+            catch (Exception ex) { throw new AppException("Exception:", ex); ; }
 
         }
+
         private MoreInformation UpdateInformationsList(List<MoreInformation> more, bool bought)
         {
-            long HoldLastDate = isNull(more.Last().date) ?
-                (long)Alarm.DateTimeToUnixTime(DateTime.Now) //if it Null
+            long HoldLastDate = M.isNull(more.Last().date) ?
+                (long)M.DateTimeToUnixTime(DateTime.Now) //if it Null
                 : (long)more.Last().date;//if Date has Value
 
-            int HoldNo = isNull(more.Last().no) ?
+            int HoldNo = M.isNull(more.Last().no) ?
                 1 //if it Null
                 : (int)more.Last().no;
 
-            string HoldtypeOfNo = isNull(more.Last().typeOfNo) ?
+            string HoldtypeOfNo = M.isNull(more.Last().typeOfNo) ?
                 "" //if it Null
                 : more.Last().typeOfNo;
 
-            var now = (long)Alarm.DateTimeToUnixTime(DateTime.Now);
+            var now = (long)M.DateTimeToUnixTime(DateTime.Now);
 
             MoreInformation listUpdate = new MoreInformation()
             {
@@ -401,6 +393,7 @@ namespace FridgeServer.Services
 
             return listUpdate;
         }
+
         private string validatePost(Grocery grocery)
         {
 
@@ -414,11 +407,12 @@ namespace FridgeServer.Services
 
             return passedValidation;
         }
+
         private List<MoreInformation> UpdateInformationsAdd(List<MoreInformation> more)
         {
             int HoldNo = (int)more.Last().no;
             string HoldtypeOfNo = more.Last().typeOfNo;
-            var now = (long)Alarm.DateTimeToUnixTime(DateTime.Now);
+            var now = (long)M.DateTimeToUnixTime(DateTime.Now);
 
             MoreInformation listUpdate = new MoreInformation()
             {
@@ -431,102 +425,21 @@ namespace FridgeServer.Services
 
             return replaceLast(more, listUpdate);
         }
+
         private bool MoreisNullOrEmpty(List<MoreInformation> Object)
         {
             if (Object == null)
             {
-
                 return true;
             }
-            else
-            {
-                if (Object.Count == 0)
-                {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-        private bool isNull<T>(T Object)
-        {
-            if (Object == null)
+            if (Object.Count == 0)
             {
                 return true;
             }
+
             return false;
         }
 
-        //======TESTING
-        public Sport SportsGetAll()
-        {/*
-            if (!db.sports.Any())
-            {
-                var players1 = new List<Player>()
-                {
-                   new Player(){ age = 21, name = "Cristiano Ronaldo"},
-                   new Player(){age = 38 , name="Iniesta"}
-                };
-                var players2 = new List<Player>()
-                {
-                   new Player(){ age = 29, name = "Messi"},
-                   new Player(){age = 35 , name="Costa"}
-                };
-                var players3 = new List<Player>()
-                {
-                   new Player(){ age = 20, name = "Neymar"},
-                   new Player(){age = 30 , name="Harry Kane"}
-                };
-                var players4 = new List<Player>()
-                {
-                   new Player(){ age = 19, name = "Eden Hazard"},
-                   new Player(){age = 34 , name="Mourinho"}
-                };
-
-                var team1 = new List<Team>()
-                {
-                    new Team(){name = "real madrid",players=players1},
-                    new Team(){ name = "Barcelona",players=players2}
-                };
-                var team2 = new List<Team>()
-                {
-                    new Team(){name = "Ahly",players=players3},
-                    new Team(){ name = "Zamalek",players=players4}
-                };
-
-                var league = new List<League>()
-                {
-                    new League(){name = "fc",teams=team1,description="Some Leauge"},
-                    new League(){name="al",teams=team2,description="League"}
-                };
-                var sportH = new Sport()
-                {
-                    name = "Football",
-                    leagues = league
-                };
-                db.sports.Add(sportH);
-                db.SaveChanges();
-            }
-
-            var sportQuery = db.sports
-                .Include(l=>l.leagues)
-                .Include("leagues.teams")
-                .Include("leagues.teams.players")
-                .ToList();
-            var sportEntry = db.sports.SingleOrDefault(s => s.id == 1);
-            //db.Entry(sportEntry).Collection(s => s.leagues).Load();
-
-
-            ;
-
-            var IncluedSport = db.sports
-                .Include(x => x.leagues)
-                ;
-                */
-
-            return null;
-
-        }
 
     }//Class
 }
