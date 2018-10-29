@@ -16,9 +16,8 @@ using FridgeServer.Models.Dto;
 namespace FridgeServer.Controllers
 {
     [Authorize]
-    //[ApiController]
-    //[Produces("application/json")]
-    //[Route("api/GroceriesApi")]
+    [ApiController]
+    [Produces("application/json")]
     [Route("api/[controller]")]
     public class GroceriesApiController : Controller
     {
@@ -227,17 +226,8 @@ namespace FridgeServer.Controllers
             return BadRequest( String.Format(req) );
         }
 
-        [AllowAnonymous]
-        [HttpGet("test")]
-        public IActionResult CheckGroceryNameExists()
-        {
-            var Return = groceriesService.SportsGetAll();
-
-            return Ok(Return);
-        }
-
         [HttpPost("nameExists")]
-        public IActionResult TEST([FromBody] ValueDto valueDto)
+        public IActionResult NameExists([FromBody] ValueDto valueDto)
         {
             var id = int.Parse(HttpContext.User.Identity.Name);
             if (!ModelState.IsValid)
@@ -255,26 +245,6 @@ namespace FridgeServer.Controllers
                 value = groceriesService.GroceryExistsName(valueDto.value, id)
             };
             return Ok(response);
-        }
-
-        /// ================================================= General Helper Methods =================================================///
-        public int StringToInt(string str)
-        {
-            int x = 0;
-            if (str == null)
-            {
-                return x;
-            }
-            for (System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(str, @"\d+"); match.Success; match = match.NextMatch())
-            {
-                x = int.Parse(match.Value, System.Globalization.NumberFormatInfo.InvariantInfo);
-            }
-
-            return x;
-        }
-        public string StringfyObject<T>(T Object)
-        {
-            return Newtonsoft.Json.JsonConvert.SerializeObject(Object);
         }
 
     }//class
