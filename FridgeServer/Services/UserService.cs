@@ -30,6 +30,7 @@ namespace FridgeServer.Services
         object DeleteFriendship(FriendRequestDto friendRequestDto);
         string GenerateUserInvitaionCode(int id);
         int? IdValidation(int userId, int GevenId);
+        User ChangePassword(PasswordDto passwordDto);
     }
     public class UserService : IUserService
     {
@@ -42,11 +43,12 @@ namespace FridgeServer.Services
         }
         public User Create(User usr, string password)
         {
-            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(usr.username))
+            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(usr.username) || string.IsNullOrWhiteSpace(usr.email) )
                 throw new AppException("Password or Username is Empty");
             if (IsUserNameExistsInDb(usr.username))
                 throw new AppException("Username Already Exists, Try new one");
-
+            usr.email = usr.email.ToLower();
+            usr.username = usr.username.ToLower();
 
             byte[] PasswordHash, PasswordSalt;
             CreatePasswordHash(password, out PasswordHash, out PasswordSalt);
@@ -60,11 +62,12 @@ namespace FridgeServer.Services
             return AddedEntity.Entity;
         }
 
-        public User Authenticate(string username, string password)
+        public User Authenticate(string login_name, string password)
         {
-            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(username))
+            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(login_name))
                 throw new AppException("Password or Username is Empty");
-            var user = db.Users.Include("userFriends").FirstOrDefault(x => x.username == username);
+            login_name = login_name.ToLower();
+            var user = db.Users.Include("userFriends").FirstOrDefault(x => x.username == login_name|| x.email == login_name);
             if (user == null)
                 return null;
             if (VerifyPasswordHash(password, user.passwordHash, user.passwordSalt) == false)
@@ -80,15 +83,18 @@ namespace FridgeServer.Services
             if (user.username != userParam.username)
             {   //Don't Allow username Changes (for now)
                 throw new AppException("username " + user.username + " AlreadyTaken");
-
-                if (IsUserNameExistsInDb(userParam.username))
-                    throw new AppException("username " + user.username + " AlreadyTaken");
+                //if (IsUserNameExistsInDb(userParam.username))
+                  //  throw new AppException("username " + user.username + " AlreadyTaken");
 
             }
             //user.username = userParam.username;
             user.firstname = userParam.firstname;
             user.lastname = userParam.lastname;
-
+            user.email = userParam.email.ToLower() ;
+            if (string.IsNullOrWhiteSpace(user.email) || string.IsNullOrWhiteSpace(user.firstname) || string.IsNullOrWhiteSpace(user.lastname) )
+            {
+                throw new AppException("Empty Data");
+            }
             //If password was entred
             if (!string.IsNullOrWhiteSpace(password))
             {
@@ -99,7 +105,37 @@ namespace FridgeServer.Services
             }
             var Updateentity = db.Users.Update(user);
             db.SaveChanges();
-            return Updateentity.Entity;
+            var userdto = db.Users.Include("userFriends").FirstOrDefault(x => x.id == Updateentity.Entity.id);
+            return userdto;
+        }
+
+        public User ChangePassword(PasswordDto passwordDto)
+        {
+            var user = db.Users.Find(passwordDto.id);
+            if (user == null) throw new AppException("User not found");
+
+            var newpassword = passwordDto.newpassword;
+            var oldpassword = passwordDto.oldpassword;
+
+            //checking old password
+            var valid = VerifyPasswordHash(oldpassword, user.passwordHash, user.passwordSalt);
+            if (!valid)
+            {
+                return null;
+            }
+            //If password was entred
+            if (!string.IsNullOrWhiteSpace(newpassword))
+            {
+                byte[] PasswordSalt, PasswordHash;
+                CreatePasswordHash(newpassword, out PasswordHash, out PasswordSalt);
+                user.passwordHash = PasswordHash;
+                user.passwordSalt = PasswordSalt;
+            }
+
+            var Updateentity = db.Users.Update(user);
+            db.SaveChanges();
+            var userdto = db.Users.Include("userFriends").FirstOrDefault(x => x.id == Updateentity.Entity.id);
+            return userdto;
         }
 
         public User Delete(int userid)

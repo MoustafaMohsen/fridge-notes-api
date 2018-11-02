@@ -11,6 +11,8 @@ namespace FridgeServer.Models.Dto
         public string firstname { get; set; }
         public string lastname { get; set; }
         public string username { get; set; }
+        public string email { get; set; }
+    
         public string password { get; set; }
         public string token { get; set; }
 
@@ -32,5 +34,12 @@ namespace FridgeServer.Models.Dto
     public class ValueDto
     {
         public string value { get; set; }
+    }
+    public class PasswordDto
+    {
+        public int id { get; set; }
+        public string oldpassword { get; set; }
+        public string newpassword { get; set; }
+
     }
 }
