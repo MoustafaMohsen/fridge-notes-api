@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace FridgeServer.Services
 {
@@ -74,13 +75,11 @@ namespace FridgeServer.Services
             var Users = UsersQuerable.Where(u => CompareSecretWithSecrets(u.secretId, friendsSecrets))//.Include("moreInformations")
                 .ToList()
                 ;
-            var FriendsGroceries1 = Users.SelectMany(u => u.userGroceries)
-            //.ToList()
-            ;
             var FriendsGroceries = new List<Grocery>();
             for (int i = 0; i < Users.Count(); i++)
             {
                 var user = Users[i];
+
                 FriendsGroceries.AddRange(user.userGroceries);
             }
 
@@ -95,6 +94,22 @@ namespace FridgeServer.Services
             {
                 if (secretId == secrets[i])
                     return true;
+            }
+            return false;
+        }
+        public static bool IsGroceryExcluded(int userid,string excludeids)
+        {
+            string pattern = @"(\d+)\,";
+            string idString = "" + userid;
+            var matches = Regex.Matches(excludeids, pattern);
+
+            foreach (Match m in matches)
+            {
+                var matchedId = Regex.Match(m.ToString(), @"(\d+)").ToString();
+                if(matchedId == idString)
+                {
+                    return true;
+                }
             }
             return false;
         }

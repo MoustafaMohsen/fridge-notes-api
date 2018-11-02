@@ -165,7 +165,52 @@ namespace FridgeServer.Controllers
             try
             {
                 var editeduser = userService.Update(user, userDto.password);
-                return Ok(editeduser);
+                var editeduserDto = mapper.Map<UserDto>(editeduser);
+                editeduserDto.token = userService.GenerateUserToken(editeduserDto.id, 7);
+                var response = new ResponseDto()
+                {
+                    statusText = "Done",
+                    value = editeduserDto
+                };
+                return Ok(response);
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(new { message = ex.Message, Exeption = ex });
+            }
+
+        }
+        //Change password
+        [HttpPut("changepassword")]
+        public IActionResult ChangePassword(PasswordDto passwordDto)
+        {
+
+            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            if (CurrentUserId != passwordDto.id)
+            {
+                return BadRequest("id Invalid");
+            }
+            passwordDto.id = CurrentUserId;
+            try
+            {
+                var editeduser = userService.ChangePassword(passwordDto);
+                var editeduserDto = mapper.Map<UserDto>(editeduser);
+                var response = new ResponseDto()
+                    {
+                        statusText = "Done",
+                        value = editeduserDto
+                    };
+                if (response .value== null)
+                {
+                    response.statusText = "Account Password is incorrect";
+                    return Ok(response);
+                }
+                else
+                {
+                    editeduserDto.token = userService.GenerateUserToken(editeduserDto.id, 7);
+                    response.statusText = "Done";
+                    return Ok(response);
+                }
             }
             catch (AppException ex)
             {

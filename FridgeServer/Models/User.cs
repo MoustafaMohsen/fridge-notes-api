@@ -12,6 +12,7 @@ namespace FridgeServer.Models
         public string firstname { get; set; }
         public string lastname { get; set; }
         public string username { get; set; }
+        public string email { get; set; }
         public byte[] passwordHash { get; set; }
         public byte[] passwordSalt { get; set; }
 

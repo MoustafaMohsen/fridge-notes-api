@@ -24,6 +24,8 @@ namespace FridgeServer.Models
         public int ownerid { get; set; }
         public string owner { get; set; }
 
+        public string excludeids { get; set; }
+
         public long? timeout { get; set; }//current Lifetime of the item
 
         public string category { get; set; } = "";
