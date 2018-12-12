@@ -40,10 +40,10 @@ namespace FridgeServer.Controllers
         }
 
         //Get all user
-        [HttpGet]
+        [HttpGet("users")]
         public async Task<IActionResult> GetAll()
         {
-            var users = userService.GetAllUsing_Manager();
+            var users =userService.GetAllUsing_Manager().ToList();
             return Ok(new { users });
         }
 

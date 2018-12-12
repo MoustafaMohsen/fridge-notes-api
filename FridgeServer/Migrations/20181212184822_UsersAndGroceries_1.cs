@@ -1,76 +1,12 @@
 ﻿using System;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace FridgeServer.Migrations
 {
-    public partial class IdentityUser_1 : Migration
+    public partial class UsersAndGroceries_1 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_userFriends_Users_Userid",
-                table: "userFriends");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_userGroceries_Users_Userid",
-                table: "userGroceries");
-
-            migrationBuilder.DropTable(
-                name: "Users");
-
-            migrationBuilder.DropIndex(
-                name: "IX_userGroceries_Userid",
-                table: "userGroceries");
-
-            migrationBuilder.DropIndex(
-                name: "IX_userFriends_Userid",
-                table: "userFriends");
-
-            migrationBuilder.RenameColumn(
-                name: "Userid",
-                table: "userGroceries",
-                newName: "UserId");
-
-            migrationBuilder.RenameColumn(
-                name: "Userid",
-                table: "userFriends",
-                newName: "UserId");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "ownerid",
-                table: "userGroceries",
-                nullable: false,
-                oldClrType: typeof(int));
-
-            migrationBuilder.AlterColumn<string>(
-                name: "UserId",
-                table: "userGroceries",
-                nullable: true,
-                oldClrType: typeof(int));
-
-            migrationBuilder.AddColumn<string>(
-                name: "ApplicationUserId",
-                table: "userGroceries",
-                nullable: true);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "friendUserId",
-                table: "userFriends",
-                nullable: true,
-                oldClrType: typeof(int));
-
-            migrationBuilder.AlterColumn<string>(
-                name: "UserId",
-                table: "userFriends",
-                nullable: true,
-                oldClrType: typeof(int));
-
-            migrationBuilder.AddColumn<string>(
-                name: "ApplicationUserId",
-                table: "userFriends",
-                nullable: true);
-
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
@@ -118,7 +54,7 @@ namespace FridgeServer.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                        .Annotation("Sqlite:Autoincrement", true),
                     RoleId = table.Column<string>(nullable: false),
                     ClaimType = table.Column<string>(nullable: true),
                     ClaimValue = table.Column<string>(nullable: true)
@@ -139,7 +75,7 @@ namespace FridgeServer.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                        .Annotation("Sqlite:Autoincrement", true),
                     UserId = table.Column<string>(nullable: false),
                     ClaimType = table.Column<string>(nullable: true),
                     ClaimValue = table.Column<string>(nullable: true)
@@ -219,15 +155,80 @@ namespace FridgeServer.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_userGroceries_ApplicationUserId",
-                table: "userGroceries",
-                column: "ApplicationUserId");
+            migrationBuilder.CreateTable(
+                name: "userFriends",
+                columns: table => new
+                {
+                    id = table.Column<int>(nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    friendUsername = table.Column<string>(nullable: true),
+                    friendUserId = table.Column<string>(nullable: true),
+                    friendEncryptedCode = table.Column<string>(nullable: true),
+                    AreFriends = table.Column<bool>(nullable: false),
+                    ApplicationUserId = table.Column<string>(nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_userFriends", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_userFriends_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_userFriends_ApplicationUserId",
-                table: "userFriends",
-                column: "ApplicationUserId");
+            migrationBuilder.CreateTable(
+                name: "userGroceries",
+                columns: table => new
+                {
+                    id = table.Column<int>(nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    name = table.Column<string>(nullable: false),
+                    basic = table.Column<bool>(nullable: false),
+                    groceryOrBought = table.Column<bool>(nullable: false),
+                    ownerid = table.Column<string>(nullable: false),
+                    owner = table.Column<string>(nullable: true),
+                    excludeids = table.Column<string>(nullable: true),
+                    timeout = table.Column<long>(nullable: true),
+                    category = table.Column<string>(nullable: true),
+                    style = table.Column<string>(nullable: true),
+                    ApplicationUserId = table.Column<string>(nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_userGroceries", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_userGroceries_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "moreInformations",
+                columns: table => new
+                {
+                    id = table.Column<int>(nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    date = table.Column<long>(nullable: true),
+                    bought = table.Column<bool>(nullable: false),
+                    lifeTime = table.Column<long>(nullable: true),
+                    no = table.Column<int>(nullable: true),
+                    typeOfNo = table.Column<string>(nullable: true),
+                    Groceryid = table.Column<int>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_moreInformations", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_moreInformations_userGroceries_Groceryid",
+                        column: x => x.Groceryid,
+                        principalTable: "userGroceries",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -238,8 +239,7 @@ namespace FridgeServer.Migrations
                 name: "RoleNameIndex",
                 table: "AspNetRoles",
                 column: "NormalizedName",
-                unique: true,
-                filter: "[NormalizedName] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserClaims_UserId",
@@ -265,36 +265,26 @@ namespace FridgeServer.Migrations
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
-                unique: true,
-                filter: "[NormalizedUserName] IS NOT NULL");
+                unique: true);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_userFriends_AspNetUsers_ApplicationUserId",
+            migrationBuilder.CreateIndex(
+                name: "IX_moreInformations_Groceryid",
+                table: "moreInformations",
+                column: "Groceryid");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_userFriends_ApplicationUserId",
                 table: "userFriends",
-                column: "ApplicationUserId",
-                principalTable: "AspNetUsers",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                column: "ApplicationUserId");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_userGroceries_AspNetUsers_ApplicationUserId",
+            migrationBuilder.CreateIndex(
+                name: "IX_userGroceries_ApplicationUserId",
                 table: "userGroceries",
-                column: "ApplicationUserId",
-                principalTable: "AspNetUsers",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
+                column: "ApplicationUserId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_userFriends_AspNetUsers_ApplicationUserId",
-                table: "userFriends");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_userGroceries_AspNetUsers_ApplicationUserId",
-                table: "userGroceries");
-
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -311,108 +301,19 @@ namespace FridgeServer.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "moreInformations");
+
+            migrationBuilder.DropTable(
+                name: "userFriends");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
+                name: "userGroceries");
+
+            migrationBuilder.DropTable(
                 name: "AspNetUsers");
-
-            migrationBuilder.DropIndex(
-                name: "IX_userGroceries_ApplicationUserId",
-                table: "userGroceries");
-
-            migrationBuilder.DropIndex(
-                name: "IX_userFriends_ApplicationUserId",
-                table: "userFriends");
-
-            migrationBuilder.DropColumn(
-                name: "ApplicationUserId",
-                table: "userGroceries");
-
-            migrationBuilder.DropColumn(
-                name: "ApplicationUserId",
-                table: "userFriends");
-
-            migrationBuilder.RenameColumn(
-                name: "UserId",
-                table: "userGroceries",
-                newName: "Userid");
-
-            migrationBuilder.RenameColumn(
-                name: "UserId",
-                table: "userFriends",
-                newName: "Userid");
-
-            migrationBuilder.AlterColumn<int>(
-                name: "ownerid",
-                table: "userGroceries",
-                nullable: false,
-                oldClrType: typeof(string));
-
-            migrationBuilder.AlterColumn<int>(
-                name: "Userid",
-                table: "userGroceries",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<int>(
-                name: "friendUserId",
-                table: "userFriends",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<int>(
-                name: "Userid",
-                table: "userFriends",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldNullable: true);
-
-            migrationBuilder.CreateTable(
-                name: "Users",
-                columns: table => new
-                {
-                    id = table.Column<int>(nullable: false)
-                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
-                    email = table.Column<string>(nullable: true),
-                    firstname = table.Column<string>(nullable: true),
-                    lastname = table.Column<string>(nullable: true),
-                    passwordHash = table.Column<byte[]>(nullable: true),
-                    passwordSalt = table.Column<byte[]>(nullable: true),
-                    secretId = table.Column<string>(nullable: true),
-                    username = table.Column<string>(nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Users", x => x.id);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_userGroceries_Userid",
-                table: "userGroceries",
-                column: "Userid");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_userFriends_Userid",
-                table: "userFriends",
-                column: "Userid");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_userFriends_Users_Userid",
-                table: "userFriends",
-                column: "Userid",
-                principalTable: "Users",
-                principalColumn: "id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_userGroceries_Users_Userid",
-                table: "userGroceries",
-                column: "Userid",
-                principalTable: "Users",
-                principalColumn: "id",
-                onDelete: ReferentialAction.Cascade);
         }
     }
 }

@@ -3,7 +3,6 @@ using System;
 using FridgeServer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FridgeServer.Migrations
@@ -15,11 +14,9 @@ namespace FridgeServer.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "2.1.1-rtm-30846")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128)
-                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                .HasAnnotation("ProductVersion", "2.1.1-rtm-30846");
 
-            modelBuilder.Entity("FridgeServer._UserIdentity.ApplicationUser", b =>
+            modelBuilder.Entity("FridgeServer.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd();
@@ -70,40 +67,15 @@ namespace FridgeServer.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+                        .HasName("UserNameIndex");
 
                     b.ToTable("AspNetUsers");
-                });
-
-            modelBuilder.Entity("FridgeServer._UserIdentity.UserFriend", b =>
-                {
-                    b.Property<int>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<string>("ApplicationUserId");
-
-                    b.Property<bool>("AreFriends");
-
-                    b.Property<string>("friendEncryptedCode");
-
-                    b.Property<string>("friendUserId");
-
-                    b.Property<string>("friendUsername");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("ApplicationUserId");
-
-                    b.ToTable("userFriends");
                 });
 
             modelBuilder.Entity("FridgeServer.Models.Grocery", b =>
                 {
                     b.Property<int>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("ApplicationUserId");
 
@@ -137,8 +109,7 @@ namespace FridgeServer.Migrations
             modelBuilder.Entity("FridgeServer.Models.MoreInformation", b =>
                 {
                     b.Property<int>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .ValueGeneratedOnAdd();
 
                     b.Property<int>("Groceryid");
 
@@ -159,6 +130,28 @@ namespace FridgeServer.Migrations
                     b.ToTable("moreInformations");
                 });
 
+            modelBuilder.Entity("FridgeServer.Models.UserFriend", b =>
+                {
+                    b.Property<int>("id")
+                        .ValueGeneratedOnAdd();
+
+                    b.Property<string>("ApplicationUserId");
+
+                    b.Property<bool>("AreFriends");
+
+                    b.Property<string>("friendEncryptedCode");
+
+                    b.Property<string>("friendUserId");
+
+                    b.Property<string>("friendUsername");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.ToTable("userFriends");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -177,8 +170,7 @@ namespace FridgeServer.Migrations
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
+                        .HasName("RoleNameIndex");
 
                     b.ToTable("AspNetRoles");
                 });
@@ -186,8 +178,7 @@ namespace FridgeServer.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("ClaimType");
 
@@ -206,8 +197,7 @@ namespace FridgeServer.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("ClaimType");
 
@@ -269,16 +259,9 @@ namespace FridgeServer.Migrations
                     b.ToTable("AspNetUserTokens");
                 });
 
-            modelBuilder.Entity("FridgeServer._UserIdentity.UserFriend", b =>
-                {
-                    b.HasOne("FridgeServer._UserIdentity.ApplicationUser")
-                        .WithMany("userFriends")
-                        .HasForeignKey("ApplicationUserId");
-                });
-
             modelBuilder.Entity("FridgeServer.Models.Grocery", b =>
                 {
-                    b.HasOne("FridgeServer._UserIdentity.ApplicationUser")
+                    b.HasOne("FridgeServer.Models.ApplicationUser")
                         .WithMany("userGroceries")
                         .HasForeignKey("ApplicationUserId");
                 });
@@ -291,6 +274,13 @@ namespace FridgeServer.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
+            modelBuilder.Entity("FridgeServer.Models.UserFriend", b =>
+                {
+                    b.HasOne("FridgeServer.Models.ApplicationUser")
+                        .WithMany("userFriends")
+                        .HasForeignKey("ApplicationUserId");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole")
@@ -301,7 +291,7 @@ namespace FridgeServer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("FridgeServer._UserIdentity.ApplicationUser")
+                    b.HasOne("FridgeServer.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -309,7 +299,7 @@ namespace FridgeServer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("FridgeServer._UserIdentity.ApplicationUser")
+                    b.HasOne("FridgeServer.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -322,7 +312,7 @@ namespace FridgeServer.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("FridgeServer._UserIdentity.ApplicationUser")
+                    b.HasOne("FridgeServer.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -330,7 +320,7 @@ namespace FridgeServer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("FridgeServer._UserIdentity.ApplicationUser")
+                    b.HasOne("FridgeServer.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);

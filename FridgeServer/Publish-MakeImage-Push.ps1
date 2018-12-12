@@ -33,9 +33,6 @@ else
 {
 }
 
-
-heroku container:login
-
 dotnet publish -c Release -o $publishdirectory
 
 Copy-Item ".\Dockerfile" -Destination $publishdirectory
@@ -70,7 +67,8 @@ start image tagging'
 
 & docker tag $imagename registry.heroku.com/$appname/web
 & docker images registry.heroku.com/$appname/web
-
+echo 'logging in to heroku'
+& heroku container:login
 echo '
 end image tagging
 '
