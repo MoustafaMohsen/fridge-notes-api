@@ -4,14 +4,16 @@ using FridgeServer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FridgeServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20181122172028_IdentityUser_1")]
+    partial class IdentityUser_1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -86,6 +88,8 @@ namespace FridgeServer.Migrations
 
                     b.Property<bool>("AreFriends");
 
+                    b.Property<string>("UserId");
+
                     b.Property<string>("friendEncryptedCode");
 
                     b.Property<string>("friendUserId");
@@ -106,6 +110,8 @@ namespace FridgeServer.Migrations
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("ApplicationUserId");
+
+                    b.Property<string>("UserId");
 
                     b.Property<bool>("basic");
 

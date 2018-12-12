@@ -11,16 +11,26 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Threading.Tasks;
 using AutoMapper;
-
+using FridgeServer.EmailService;
+using FridgeServer._UserIdentity;
+using Microsoft.AspNetCore.Identity;
+using Newtonsoft.Json.Serialization;
 
 namespace FridgeServer
 {
     public class Startup
     {
         
-        public Startup(IConfiguration configuration)
+        public Startup(IHostingEnvironment env/*IConfiguration configuration*/)
         {
-            Configuration = configuration;
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(env.ContentRootPath)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"AppSettings/appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"AppSettings/adminsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"AppSettings/mailsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables();
+            Configuration = builder.Build();
         }
 
         public IConfiguration Configuration { get; }
@@ -29,6 +39,7 @@ namespace FridgeServer
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddAutoMapper();
+
             //=========Sql Server
             services.AddDbContext<AppDbContext>(
                 options => {
@@ -41,51 +52,27 @@ namespace FridgeServer
 
             //configure strongly typed settings objects
             var appSettingsSection = Configuration.GetSection("AppSettings");
+            var appSettings = appSettingsSection.Get<AppSettings>();
+
             //Add configration
             services.Configure<AppSettings>(appSettingsSection);
 
-            //====configure jwt authentication
-            //Get Key
-            var appSetting = appSettingsSection.Get<AppSettings>();
-            var Key = Encoding.ASCII.GetBytes(appSetting.Secret);
 
-            services.AddAuthentication(x =>
-            {
-                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(x =>
-            {
-                x.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = context =>
-                    {
-                        var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
-                        var userId = int.Parse(context.Principal.Identity.Name);
-                        var user = userService.FindById(userId);
-                        if (user == null)
-                        {
-                            // return unauthorized if user no longer exists
-                            context.Fail("Unauthorized");
-                        }
-                        return Task.CompletedTask;
-                    }
-                };
-                x.RequireHttpsMetadata = false;
-                x.SaveToken = true;
-                x.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Key),
-                    ValidateIssuer = false,
-                    ValidateAudience = false
-                };
-            });
+            // Add My Identity
+            services.AddMyUserIdentity<AppDbContext>(appSettings.jwt.SecretKey, appSettings.jwt.Audience, appSettings.jwt.Issuer);
+
 
             services.AddScoped< IGroceriesService, GroceriesService>();
             services.AddScoped<IUserService, UserService>();
             services.AddTransient<GuessTimeout>();
-            services.AddMvc();
+
+            services.AddMvc()
+                // Make api Return properties as it is, Keeps capital properties
+               .AddJsonOptions(options =>
+                    {
+                        options.SerializerSettings.ContractResolver = new DefaultContractResolver();
+                    });
+
             services.AddCors();
         }
 

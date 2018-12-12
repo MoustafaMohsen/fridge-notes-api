@@ -1,4 +1,5 @@
-﻿using FridgeServer.Data;
+﻿using FridgeServer._UserIdentity;
+using FridgeServer.Data;
 using FridgeServer.Helpers;
 using FridgeServer.Models;
 using Microsoft.EntityFrameworkCore;
@@ -6,21 +7,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace FridgeServer.Services
 {
     public interface IGroceriesService
     {
-        List<Grocery> GetGrocery(int id);
-        Grocery GetGroceryById(int Groceryid, int userid);
-        User AddGrocery(Grocery grocery, int id);
-        void neededGrocery(Grocery grocery, int id);
-        string boughtgrocery(Grocery grocery, int id);
-        string editgrocery(Grocery grocery, int id);
-        string removegrocery(Grocery grocery, int id);
-        string deletegrocery(Grocery grocery, int id);
+        Task<List<Grocery>> GetGrocery(string userId);
+        Task<Grocery> GetGroceryById(int Groceryid, string userId);
+        Task<ApplicationUser> AddGrocery(Grocery grocery, string userId);
+        Task neededGrocery(Grocery grocery, string userId);
+        Task<string> boughtgrocery(Grocery grocery, string userId);
+        Task<string> editgrocery(Grocery grocery, string userId);
+        Task<string> removegrocery(Grocery grocery, string userId);
+        Task<string> deletegrocery(Grocery grocery, string userId);
         string guessgrocery(Grocery grocery);
-        bool GroceryExistsName(string name, int id);
+        Task<bool> GroceryExistsName(string name, string userId);
 
     }
     public class GroceriesService : IGroceriesService
@@ -29,26 +31,28 @@ namespace FridgeServer.Services
 
         private AppDbContext db;
         private GuessTimeout guessTimeout;
-        public GroceriesService( AppDbContext _db, GuessTimeout _guessTimeout)
+        private IUserService userService;
+        public GroceriesService( AppDbContext _db, GuessTimeout _guessTimeout, IUserService _userService)
         {
             db = _db;
             guessTimeout = _guessTimeout;
+            userService = _userService;
         }
 
 
-        public List<Grocery> GetGrocery(int userid)
+        public async Task<List<Grocery>> GetGrocery(string userId)
         {
-            var Groceries = GetGroceryIncludefriends(userid).ToList();//GetUserGroceries(userid);
+            var Groceries = (await GetGroceryIncludefriends(userId) ).ToList();//GetUserGroceries(userid);
             ;
 
             return Groceries;
         }
 
         //update
-        public IEnumerable<Grocery> GetGroceryIncludefriends(int userid)
+        public async Task<IEnumerable<Grocery>> GetGroceryIncludefriends(string userId)
         {
             //what's the diffrence between select and find
-            var Fulluser = GetFullUser(userid);
+            var Fulluser = await GetFullUser(userId);
             var Groceries = Fulluser.userGroceries;
 
             var friends = Fulluser.userFriends;
@@ -97,16 +101,18 @@ namespace FridgeServer.Services
             }
             return false;
         }
-        public static bool IsGroceryExcluded(int userid,string excludeids)
+
+        // DOES NOT WORK
+        // TODO:Update regex pattaren
+        public static bool ToDo_IsGroceryExcluded(string userId,string excludeids)
         {
             string pattern = @"(\d+)\,";
-            string idString = "" + userid;
             var matches = Regex.Matches(excludeids, pattern);
 
             foreach (Match m in matches)
             {
                 var matchedId = Regex.Match(m.ToString(), @"(\d+)").ToString();
-                if(matchedId == idString)
+                if(matchedId == userId)
                 {
                     return true;
                 }
@@ -114,9 +120,9 @@ namespace FridgeServer.Services
             return false;
         }
 
-        public Grocery GetGroceryById(int Groceryid,int userid )
+        public async Task<Grocery> GetGroceryById(int Groceryid,string userId )
         {
-            var grocery = GetSpecificGroceryForUser(Groceryid,userid);
+            var grocery = await GetSpecificGroceryForUser(Groceryid, userId);
 
             if (grocery == null)
             {
@@ -126,31 +132,33 @@ namespace FridgeServer.Services
             return grocery;
         }
 
-        public User AddGrocery(Grocery grocery,int id)
+        public async Task<ApplicationUser> AddGrocery(Grocery grocery,string userId)
         {
             //--------------add logic-------------//
             //Validation
-            if (GroceryExistsName(grocery.name,id)) { throw new AppException("Username Already Exists, Try new one");  }//validate
+            if (await GroceryExistsName(grocery.name, userId)) { throw new AppException("Username Already Exists, Try new one");  }//validate
 
             grocery.moreInformations = UpdateInformationsAdd(grocery.moreInformations);
 
-            var queryable = db.Users.Find(id);
-            grocery.owner = queryable.firstname;
-            grocery.ownerid = queryable.id;
-            queryable.userGroceries = new List<Grocery>();
-            queryable.userGroceries.Add(grocery);
+            var user = await GetFullUser(userId);
+            grocery.owner = user.FirstName;
+            grocery.ownerid = user.Id;
+            //If userGroceries is empty initial it
+            if (M.isNull(user.userGroceries))
+            {
+                user.userGroceries = new List<Grocery>();
+            }
+            user.userGroceries.Add(grocery);
 
-
-            var userEntity = db.Users.Update(queryable);
-            //db.Entry(queryable).State = EntityState.Modified;
-            db.SaveChanges();
+            var userEntity = db.Users.Update(user);
+            await db.SaveChangesAsync();
             return userEntity.Entity;
         }
 
-        public void neededGrocery(Grocery grocery, int userid)
+        public async Task neededGrocery(Grocery grocery, string userId)
         {
 
-            var editgrocery = GetSpecificGroceryForUser(grocery.id,userid);
+            var editgrocery = await GetSpecificGroceryForUser(grocery.id, userId);
 
             if (editgrocery == null) { throw new AppException("No grocery was found"); }//validate
 
@@ -163,7 +171,7 @@ namespace FridgeServer.Services
 
             try
             {
-                db.SaveChanges();
+                await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -172,9 +180,9 @@ namespace FridgeServer.Services
             return ;
         }
 
-        public string boughtgrocery(Grocery grocery, int userid)
+        public async Task<string> boughtgrocery(Grocery grocery, string userId)
         {
-            var editgrocery = GetSpecificGroceryForUser(grocery.id, userid);
+            var editgrocery = await GetSpecificGroceryForUser(grocery.id, userId);
 
             if (editgrocery == null) { throw new AppException("Id Not found");  }//validate
 
@@ -188,7 +196,7 @@ namespace FridgeServer.Services
             db.Entry(editgrocery).State = EntityState.Modified;
             try
             {
-                db.SaveChanges();
+                await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -197,9 +205,9 @@ namespace FridgeServer.Services
             return "bought";
         }
 
-        public string editgrocery(Grocery grocery, int userid)
+        public async Task<string> editgrocery(Grocery grocery, string userId)
         {
-            var editgrocery = GetSpecificGroceryForUser(grocery.id, userid);
+            var editgrocery = await GetSpecificGroceryForUser(grocery.id, userId);
 
             if (editgrocery == null) throw new AppException("Not found");
             editgrocery.basic= grocery.basic;
@@ -211,11 +219,11 @@ namespace FridgeServer.Services
 
             try
             {
-                db.SaveChanges();
+                await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!GroceryExistsId(grocery.id , userid))
+                if (!await GroceryExistsId(grocery.id , userId))
                 {
                     return "NotFound";
                 }
@@ -227,10 +235,10 @@ namespace FridgeServer.Services
             return "edited";
         }
 
-        public string removegrocery(Grocery grocery, int userid)
+        public async Task<string> removegrocery(Grocery grocery, string userId)
         {
 
-            var removegrocery  = GetSpecificGroceryForUser(grocery.id, userid);
+            var removegrocery  = await GetSpecificGroceryForUser(grocery.id, userId);
 
             if (removegrocery == null)
                 throw new AppException("Not found");
@@ -247,7 +255,7 @@ namespace FridgeServer.Services
 
             try
             {
-                db.SaveChanges();
+                await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -257,9 +265,9 @@ namespace FridgeServer.Services
             return "Ok";
         }
 
-        public string deletegrocery(Grocery grocery, int userid)
+        public async Task<string> deletegrocery(Grocery grocery, string userId)
         {
-            var user = GetFullUser(userid);
+            var user = await GetFullUser(userId);
             var Deletegrocery = user.userGroceries.FirstOrDefault(g=>g.id==grocery.id);
 
             if (Deletegrocery == null)
@@ -270,7 +278,7 @@ namespace FridgeServer.Services
             db.Users.Update(user);
             try
             {
-                db.SaveChanges();
+                await db.SaveChangesAsync();
                 return "Deleted";
             }
             catch (DbUpdateConcurrencyException)
@@ -289,53 +297,53 @@ namespace FridgeServer.Services
             return "" + HandleTimeout(grocery, 0);
         }
 
-        public bool GroceryExistsName(string name,int id)
+        public async Task<bool> GroceryExistsName(string name,string userId)
         {
             if (string.IsNullOrEmpty(name)) return true;
-            return db.Users.Any(u => u.id == id && u.userGroceries.Any(e => e.name.ToLower() == name.ToLower()));
+            return await db.Users.AnyAsync(u => u.Id == userId && u.userGroceries.Any(e => e.name.ToLower() == name.ToLower()));
         }
 
 
         //============ Private Methods ===========//
-        private User GetFullUser(int id)
+        private async Task<ApplicationUser> GetFullUser(string Id)
         {
-            var user = db.Users
+            var user = await db.Users
                 .Include("userGroceries")
                 .Include("userGroceries.moreInformations")
                 .Include("userFriends")
-                .FirstOrDefault(u => u.id == id);
+                .FirstOrDefaultAsync(u => u.Id == Id);
             return user;
         }
 
-        private List<Grocery> GetUserGroceries(int userid)
+        private async Task<List<Grocery>> GetUserGroceries(string userId)
         {
-            var groceries = db.userGroceries
+            var groceries = await db.userGroceries
                 .Include("moreInformations")
-                .Where(u => u.Userid == userid)
-                .ToList();
+                .Where(u => u.ApplicationUserId == userId)
+                .ToListAsync();
             return groceries;
         }
 
-        private List<UserFriend> GetUserFriends(int userid)
+        private List<UserFriend> GetUserFriends(string userId)
         {
             var friends = db.userFriends
-                .Where(u => u.Userid == userid)
+                .Where(u => u.ApplicationUserId == userId)
                 .ToList();
             return friends;
         }
 
-        private Grocery GetSpecificGroceryForUser(int groceryid, int userid)
+        private async Task<Grocery> GetSpecificGroceryForUser(int groceryid, string userId)
         {
-            var groceries = GetFullUser(userid)
+            var groceries =(await GetFullUser(userId))
                 .userGroceries
                 .FirstOrDefault(g=>g.id==groceryid)
             ;
             return groceries;
         }
 
-        private bool GroceryExistsId(int Groceryid, int id)
+        private async Task<bool> GroceryExistsId(int Groceryid, string userId)
         {
-            return db.Users.Any(u => u.id == id && u.userGroceries.Any(e => e.id == Groceryid ));
+            return await db.Users.AnyAsync(u => u.Id == userId && u.userGroceries.Any(e => e.id == Groceryid ));
         }
 
         private long HandleTimeout(Grocery grocery, long? timeout)

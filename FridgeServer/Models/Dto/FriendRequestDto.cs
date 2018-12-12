@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace FridgeServer.Models.Dto
 {
-    public class GroceryDto
+    public class FriendRequestDto
     {
-        public Grocery grocery { get; set; }
+        public string invetationCode { get; set; }
         public string userId { get; set; }
     }
 }

@@ -1,12 +1,19 @@
-﻿using FridgeServer.Data;
+﻿using AutoMapper;
+using FridgeServer._UserIdentity;
+using FridgeServer._UserIdentity.Dto;
+using FridgeServer.Data;
+using FridgeServer.EmailService.SendGrid;
 using FridgeServer.Helpers;
 using FridgeServer.Models;
+using FridgeServer.Models._UserIdentity;
 using FridgeServer.Models.Dto;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -15,165 +22,160 @@ using System.Threading.Tasks;
 
 namespace FridgeServer.Services
 {
+    // TODO : Encrypt Secret invetaion and set a time limit
     public interface IUserService
     {
-        User Authenticate(string username, string password);
-        IEnumerable<User> GetAll();
-        User GetById(int id);
-        User FindById(int id);
-        User Create(User user, string password);
-        User Update(User user, string password = null);
-        User Delete(int id);
-        string GenerateUserToken(int id, int ExpiresInDays);
-        bool IsUserNameExistsInDb(string Username);
-        object AddFreindToMe(FriendRequestDto friendRequestDto);
-        object DeleteFriendship(FriendRequestDto friendRequestDto);
-        string GenerateUserInvitaionCode(int id);
-        int? IdValidation(int userId, int GevenId);
-        User ChangePassword(PasswordDto passwordDto);
+        #region User Creation and Delete
+        Task<UserDto> Create(UserDto registrationUser, string password, string host = "", string urlpath = "", bool sendEmail= true, string role = "", bool confirmEmail = false);
+        Task<ApplicationUser> Update(UserDto userParam, bool requirePassword = true);
+        Task<ApplicationUser> Update_Db(ApplicationUser userParam);
+        Task<UserDto> Login(LoginUserDto loginUserDto);
+        Task<ApplicationUser> ChangePassword(string userid, string oldpassword, string newpassword);
+        Task<bool> Delete(string userid, string password);
+        #endregion
+
+        #region Friends Managing
+        Task<UserFriend> AddFreindToMe(FriendRequestDto friendRequestDto);
+        Task<bool> DeleteFriendship(FriendRequestDto friendRequestDto);
+        Task<bool> DeleteFriendsToEachothers(string idA, string idB);
+        Task<string> GenerateUserInvitaionCodeAsync(string id);
+        bool IdInFriends(List<UserFriend> userfriends, string friendId);
+        Task<bool> AreFriendsAsync(string userId, string GevenId);
+        Task<List<UserFriend>> GetFriends(string userId);
+        #endregion
+
+        #region Email Verfication
+        Task<SendEmailResponse> sendEmailVerfication(string userId, string host = "", string urlpath="", bool force = false);
+        Task<IdentityResult> VerifyEmailAsync(string userId, string emailToken);
+        #endregion
+
+        #region Helper Methods
+        Task<ApplicationUser> GetById_Db(string id);
+        Task<ApplicationUser> GetById_Manager(string Id);
+        Task<UserDto> GetById_IncludeRole(string Id);
+        Task<bool> IsUserNameExists(string username);
+        Task<bool> IsUserameUnique(string username);
+        Task<string> GenerateUserToken(string Id, int ExpiresInDays = 90);
+        Task<string> GenerateUserToken(ApplicationUser User, int ExpiresInDays = 90);
+        Task<string> UserIdOrFriendIs(string userId, string GevenId);
+        #endregion
+
+        #region Admin Methods
+        IQueryable<ApplicationUser> GetAllUsing_Manager();
+        Task<List<ApplicationUser>> GetAllUsing_Db();
+        #endregion
     }
     public class UserService : IUserService
     {
+        #region Protected Members
         private AppDbContext db;
         private AppSettings appSettings;
-        public UserService(IOptions<AppSettings> options, AppDbContext _db)
+        protected IUserIdentityManager identityManager;
+        private IMapper mapper;
+        #endregion
+
+        #region Constructor
+        public UserService(IOptions<AppSettings> options,
+            AppDbContext _db,
+            IUserIdentityManager _identityManager,
+            IMapper _mapper
+            )
         {
             appSettings = options.Value;
             db = _db;
+            identityManager = _identityManager;
+            mapper = _mapper;
         }
-        public User Create(User usr, string password)
+        #endregion
+
+        #region User Creation and Delete
+        public async Task<UserDto> Create(UserDto registrationUser, string password,string host="",string urlpath="", bool sendEmail = true, string role = "", bool confirmEmail = false)
         {
-            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(usr.username) || string.IsNullOrWhiteSpace(usr.email) )
-                throw new AppException("Password or Username is Empty");
-            if (IsUserNameExistsInDb(usr.username))
-                throw new AppException("Username Already Exists, Try new one");
-            usr.email = usr.email.ToLower();
-            usr.username = usr.username.ToLower();
+            try
+            {
+                var apphost = string.IsNullOrWhiteSpace(host) ? appSettings.apphost : host;
+                var _urlpath = string.IsNullOrWhiteSpace(urlpath) ? appSettings.appVerPath : urlpath; ;
 
-            byte[] PasswordHash, PasswordSalt;
-            CreatePasswordHash(password, out PasswordHash, out PasswordSalt);
-            usr.passwordHash = PasswordHash;
-            usr.passwordSalt = PasswordSalt;
-            usr.secretId = RandomString(8);
-            usr.userGroceries = new List<Grocery>();
+                ApplicationUser user = await identityManager.RegisterAsync(registrationUser, apphost, _urlpath, sendEmail,role,confirmEmail);
+                user.secretId = CreateSecret(user.Id);
+                user.userFriends = new List<UserFriend>();
+                var UpdateUser = await Update_Db(user);
 
-            var AddedEntity = db.Users.Add(usr);
-            db.SaveChanges();
-            return AddedEntity.Entity;
+                var UpdatedUser = await GetById_IncludeRole(UpdateUser.Id);
+                UpdatedUser.token = await GenerateUserToken(UpdateUser);
+                return UpdatedUser;
+            }
+            catch (AppException ex)
+            {
+                throw ex;
+            }
         }
 
-        public User Authenticate(string login_name, string password)
+        public async Task<ApplicationUser> Update(UserDto userParam, bool requirePassword = true)
         {
-            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(login_name))
-                throw new AppException("Password or Username is Empty");
-            login_name = login_name.ToLower();
-            var user = db.Users.Include("userFriends").FirstOrDefault(x => x.username == login_name|| x.email == login_name);
-            if (user == null)
-                return null;
-            if (VerifyPasswordHash(password, user.passwordHash, user.passwordSalt) == false)
-                return null;
+            var user = await identityManager.UpdateInfoAsync(userParam, requirePassword);
             return user;
         }
-
-        public User Update(User userParam, string password = null)
+        public async Task<ApplicationUser> Update_Db(ApplicationUser userParam)
         {
-            var user = db.Users.Find(userParam.id);
-
-            //If username has Changed
-            if (user.username != userParam.username)
-            {   //Don't Allow username Changes (for now)
-                throw new AppException("username " + user.username + " AlreadyTaken");
-                //if (IsUserNameExistsInDb(userParam.username))
-                  //  throw new AppException("username " + user.username + " AlreadyTaken");
-
-            }
-            //user.username = userParam.username;
-            user.firstname = userParam.firstname;
-            user.lastname = userParam.lastname;
-            user.email = userParam.email.ToLower() ;
-            if (string.IsNullOrWhiteSpace(user.email) || string.IsNullOrWhiteSpace(user.firstname) || string.IsNullOrWhiteSpace(user.lastname) )
-            {
-                throw new AppException("Empty Data");
-            }
-            //If password was entred
-            if (!string.IsNullOrWhiteSpace(password))
-            {
-                byte[] PasswordSalt, PasswordHash;
-                CreatePasswordHash(password, out PasswordHash, out PasswordSalt);
-                user.passwordHash = PasswordHash;
-                user.passwordSalt = PasswordSalt;
-            }
-            var Updateentity = db.Users.Update(user);
-            db.SaveChanges();
-            var userdto = db.Users.Include("userFriends").FirstOrDefault(x => x.id == Updateentity.Entity.id);
-            return userdto;
+            var user =  db.Users.Update(userParam);
+            await db.SaveChangesAsync();
+            return user.Entity;
         }
-
-        public User ChangePassword(PasswordDto passwordDto)
+        public async Task<UserDto> Login(LoginUserDto loginUserDto)
         {
-            var user = db.Users.Find(passwordDto.id);
-            if (user == null) throw new AppException("User not found");
-
-            var newpassword = passwordDto.newpassword;
-            var oldpassword = passwordDto.oldpassword;
-
-            //checking old password
-            var valid = VerifyPasswordHash(oldpassword, user.passwordHash, user.passwordSalt);
-            if (!valid)
+            var userIDTO = await identityManager.LogInAsync(loginUserDto);
+            UserDto userDto;
+            try
             {
-                return null;
-            }
-            //If password was entred
-            if (!string.IsNullOrWhiteSpace(newpassword))
-            {
-                byte[] PasswordSalt, PasswordHash;
-                CreatePasswordHash(newpassword, out PasswordHash, out PasswordSalt);
-                user.passwordHash = PasswordHash;
-                user.passwordSalt = PasswordSalt;
-            }
 
-            var Updateentity = db.Users.Update(user);
-            db.SaveChanges();
-            var userdto = db.Users.Include("userFriends").FirstOrDefault(x => x.id == Updateentity.Entity.id);
-            return userdto;
+                userDto = mapper.Map<UserDto>(userIDTO);
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw ex;
+            }
+            return userDto;
         }
-
-        public User Delete(int userid)
+        public async Task<ApplicationUser> ChangePassword(string userid,string oldpassword,string newpassword)
         {
-            var user = db.Users.Find(userid);
-            if (user == null)
-                throw new AppException("User was not found");
-            var DeleteEntitr = db.Users.Remove(user);
-            db.SaveChanges();
-            return DeleteEntitr.Entity;
-
+            var user = await identityManager.UpdatePasswordAsync(userid, oldpassword, newpassword);
+            return user;
         }
+        public async Task<bool> Delete(string userid, string password)
+        {
+            var user = await identityManager.DeleteUserAsync(userid, password);
+            return user;
+        }
+        #endregion
 
-        public object AddFreindToMe(FriendRequestDto friendRequestDto)
+        #region Friends Managing
+        public async Task<UserFriend> AddFreindToMe(FriendRequestDto friendRequestDto)
         {
             var invetationCode = friendRequestDto.invetationCode;
 
             //Do logic to conver invetation code to code, for now no logic
             //CHANGE LATER
             var SecretId = invetationCode;//EncryptionHelper.Decrypt(code);
-            var friend = db.Users.Include("userFriends").FirstOrDefault(x => x.secretId == SecretId);
+            var friend = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.secretId == SecretId);
             if (friend == null)
                 throw new AppException("User not found");
-            if (friend.id == friendRequestDto.userId)
+            if (friend.Id == friendRequestDto.userId)
                 throw new AppException("Not Valid");
 
             //if friend already added you
             if( friend.userFriends.Any(x=>x.friendUserId==friendRequestDto.userId) )
                 throw new AppException("Friend already added you");
 
-            var objectFriends =AddFriendsToEachothers(friend.id,friendRequestDto.userId);
+            var objectFriends =await AddFriendsToEachothers(friend.Id,friendRequestDto.userId);
             return objectFriends;
         }
-
-        public object AddFriendsToEachothers(int idA,int idB)
+        public async Task<UserFriend> AddFriendsToEachothers(string idA, string idB)
         {
-            var userA = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idA);
-            var userB = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idB);
+            var userA = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.Id == idA);
+            var userB = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.Id == idB);
             if (userA == null)
                 throw new AppException("User not found");
             if (userB == null)
@@ -195,18 +197,18 @@ namespace FridgeServer.Services
 
             var UserAFriendObject = new UserFriend()
             {
-                friendUsername = userA.username,
+                friendUsername = userA.UserName,
                 friendEncryptedCode = codeA,
-                friendUserId = userA.id,
+                friendUserId = userA.Id,
                 AreFriends = true
             };
 
 
             var UserBFriendObject = new UserFriend()
             {
-                friendUsername = userB.username,
+                friendUsername = userB.UserName,
                 friendEncryptedCode = codeB,
-                friendUserId = userB.id,
+                friendUserId = userB.Id,
                 AreFriends = true
             };
 
@@ -216,22 +218,21 @@ namespace FridgeServer.Services
             userB.userFriends.Add(UserAFriendObject);
             var entityB=db.Users.Update(userB);
 
-            db.SaveChanges();
+            await db.SaveChangesAsync();
 
-            return new { objectA = entityA.Entity, objectB = entityB.Entity };
+            return UserBFriendObject;
         }
-
-        public object DeleteFriendship(FriendRequestDto friendRequestDto)
+        public async Task<bool> DeleteFriendship(FriendRequestDto friendRequestDto)
         {
             var invetationCode = friendRequestDto.invetationCode;
 
             //Do logic to conver invetation code to code, for now no logic
             //CHANGE LATER
             var SecretId = invetationCode;//EncryptionHelper.Decrypt(code);
-            var friend = db.Users.Include("userFriends").FirstOrDefault(x => x.secretId == SecretId);
+            var friend = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.secretId == SecretId);
             if (friend == null)
                 throw new AppException("User not found");
-            if (friend.id == friendRequestDto.userId)
+            if (friend.Id == friendRequestDto.userId)
                 throw new AppException("Not Valid");
 
             //if friend did not add you
@@ -239,13 +240,13 @@ namespace FridgeServer.Services
                 throw new AppException("None Existent");
 
 
-            var objectFriends = DeleteFriendsToEachothers(friend.id, friendRequestDto.userId);
-            return objectFriends;
+            var Successful = await DeleteFriendsToEachothers(friend.Id, friendRequestDto.userId);
+            return Successful;
         }
-        public object DeleteFriendsToEachothers(int idA, int idB)
+        public async Task<bool> DeleteFriendsToEachothers(string idA, string idB)
         {
-            var userA = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idA);
-            var userB = db.Users.Include("userFriends").FirstOrDefault(x => x.id == idB);
+            var userA = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.Id == idA);
+            var userB = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.Id == idB);
             if (userA == null)
                 throw new AppException("User not found");
             if (userB == null)
@@ -274,114 +275,199 @@ namespace FridgeServer.Services
             userB.userFriends.Remove(ObjectAinUserB);
             var entityB = db.Users.Update(userB);
 
-            db.SaveChanges();
-
-            return new { objectA = entityA.Entity, objectB = entityB.Entity };
-        }
-        public int? IdValidation(int userId,int GevenId)
-        {
-            var user = GetById(userId);
-            int? returnid = null;
-            for (int i = 0; i < user.userFriends.Count; i++)
+            try
             {
-                var friend = user.userFriends[i];
-                if (friend.friendUserId == GevenId)
-                {
-                    returnid = friend.friendUserId;
-                }
+                await db.SaveChangesAsync();
+                return true;
             }
-            return returnid;
+            catch (Exception ex)
+            {
+                throw new AppException(ex.Message);
+            }
+
         }
-        public string GenerateUserInvitaionCode(int id)
+        // TODO: Add secret Encryption
+        public async Task<string> GenerateUserInvitaionCodeAsync(string id)
         {
-            var secret = db.Users.Find(id).secretId;
-            var code = secret;// EncryptionHelper.Encrypt(secret);
+            var user = await GetById_Manager(id);
+            var secret = user.secretId;
+            string code = "";
+            // EncryptionHelper.Encrypt(secret);
             //Do logic to conver invetation code to code, for now no logic
             //CHANGE LATER
-            var invetationCode = code;
+            code = secret;
+            var invetationCode = secret;
             return invetationCode;
         }
-        //Get all users
-        public IEnumerable<User> GetAll()
+        public bool IdInFriends(List<UserFriend> userfriends,string friendId)
         {
-            return db.Users;
-        }
-
-        public User GetById(int id)
-        {
-            return db.Users.Include("userFriends").FirstOrDefault(x => x.id == id);
-        }
-
-        public User FindById(int id)
-        {
-            return db.Users.Find(id);
-        }
-
-        public bool IsUserNameExistsInDb(string username)
-        {
-            var user = db.Users.FirstOrDefault(x => x.username == username);
-            if (user == null)
-                return false;
-            return true;
-        }
-
-        private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            if (password == null) throw new ArgumentNullException("password");
-            if (string.IsNullOrWhiteSpace(password)) throw new ArgumentException("Value cannot be empty or whitespace only string.", "password");
-
-            using (var hmac = new System.Security.Cryptography.HMACSHA512())
+            for (int i = 0; i < userfriends.Count; i++)
             {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-            }
-        }
-
-        private static bool VerifyPasswordHash(string password, byte[] storedHash, byte[] storedSalt)
-        {
-            if (password == null) throw new ArgumentNullException("password");
-            if (string.IsNullOrWhiteSpace(password)) throw new ArgumentException("Value cannot be empty or whitespace only string.", "password");
-            if (storedHash.Length != 64) throw new ArgumentException("Invalid length of password hash (64 bytes expected).", "passwordHash");
-            if (storedSalt.Length != 128) throw new ArgumentException("Invalid length of password salt (128 bytes expected).", "passwordHash");
-
-            using (var hmac = new System.Security.Cryptography.HMACSHA512(storedSalt))
-            {
-                var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                for (int i = 0; i < computedHash.Length; i++)
+                var friend = userfriends[i];
+                if (friend.friendUserId == friendId)
                 {
-                    if (computedHash[i] != storedHash[i]) return false;
+                    return true;
                 }
             }
-
-            return true;
+            return false;
         }
-        //Helper Methods
-        public string GenerateUserToken(int id,int ExpiresInDays)
+        public async Task<bool> AreFriendsAsync(string userId, string GevenId)
         {
-            var Key = Encoding.ASCII.GetBytes( appSettings.Secret);
-
-            var TokenDescriptor = new SecurityTokenDescriptor()
+            var user = await GetById_Db(userId);
+            return IdInFriends(user.userFriends,GevenId);
+        }
+        public async Task<List<UserFriend>> GetFriends(string userId)
+        {
+            var friends = db.userFriends.Where(f => f.ApplicationUserId == userId).Select(
+                f=>new UserFriend()
+                    {
+                        id=f.id,
+                        ApplicationUserId=f.ApplicationUserId,
+                        AreFriends=f.AreFriends,
+                       friendEncryptedCode=f.friendEncryptedCode,
+                       friendUserId=f.friendUserId,
+                       friendUsername=f.friendUsername
+                    }
+                );
+            if (friends == null)
             {
-                Subject = new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.Name, id.ToString()), new Claim(ClaimTypes.NameIdentifier, id.ToString()) }),
-                Expires = DateTime.UtcNow.AddDays(ExpiresInDays),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Key) ,SecurityAlgorithms.HmacSha256Signature)
-                
-            };
-
-            var TokenHandler = new JwtSecurityTokenHandler();
-
-            var Token = TokenHandler.CreateToken(TokenDescriptor);
-            var TokenStr = TokenHandler.WriteToken(Token);
-
-            return TokenStr;
+                return new List<UserFriend>();
+            }
+            return await friends.ToListAsync();
         }
-
-        private static Random random = new Random();
-        public static string RandomString(int length)
+        public async Task<string> UserIdOrFriendIs(string userId, string GevenId)
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            return new string(Enumerable.Repeat(chars, length)
-              .Select(s => s[random.Next(s.Length)]).ToArray());
+            if (string.IsNullOrWhiteSpace(userId) ||string.IsNullOrWhiteSpace(GevenId) )
+            {
+                return null;
+            }
+            if (userId== GevenId)
+            {
+                return userId;
+            }
+            var areFriends = await AreFriendsAsync(userId, GevenId);
+            if (areFriends)
+            {
+                return GevenId;
+            }
+            return null;
         }
+        #endregion
+
+        #region Helper Methods
+        public async Task<ApplicationUser> GetById_Db(string id)
+        {
+            return await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.Id == id);
+        }
+        public async Task<ApplicationUser> GetById_Manager(string Id)
+        {
+            return await identityManager.GetUserById(Id);
+        }
+        public async Task<UserDto> GetById_IncludeRole(string Id)
+        {
+            try
+            {
+                var _uesrDro= await identityManager.GetUserById_includeRoleAsync(Id);
+                var userDto = mapper.Map<UserDto>(_uesrDro);
+                userDto.userFriends = await GetFriends( userDto.Id);
+                return userDto;
+            }
+            catch (AppException ex)
+            {
+                throw ex;
+            }
+        }
+        public IQueryable<ApplicationUser> GetAllUsing_Manager()
+        {
+            return identityManager.GetAllUsersAsync();
+        }
+        public async Task< List<ApplicationUser> > GetAllUsing_Db()
+        {
+            return await db.Users.ToListAsync();
+        }
+
+        public async Task<bool> IsUserNameExists(string username)
+        {
+            return !( await identityManager.IsUserameUnique(username) );
+        }
+        public async Task<bool> IsUserameUnique(string username)
+        {
+            return await identityManager.IsUserameUnique(username);
+        }
+
+        public async Task<string> GenerateUserToken(string Id,int ExpiresInDays=90)
+        {
+            return await identityManager.GenerateTokenAsync(Id, ExpiresInDays);
+        }
+        public async Task<string> GenerateUserToken(ApplicationUser User, int ExpiresInDays = 90)
+        {
+            return await identityManager.GenerateTokenAsync(User, ExpiresInDays);
+        }
+
+        //TOOD: encrypt the id in the secret
+        public string CreateSecret(string Input)
+        {
+            //Encrypt the Secret here
+            var encrypted = Input;
+            return encrypted;
+        }
+        #endregion
+
+        #region Email Verification
+        public async Task<IdentityResult> VerifyEmailAsync(string userId, string emailToken)
+        {
+            IdentityResult identityResult;
+            try
+            {
+                identityResult = await identityManager.VerifyEmailAsync(userId, emailToken);
+                return identityResult;
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw ex;
+            }
+        }
+        public async Task<SendEmailResponse> sendEmailVerfication(string userId, string host="", string urlpath = "", bool force=false)
+        {
+            var apphost = string.IsNullOrWhiteSpace(host) ? appSettings.apphost : host;
+            var _urlpath = string.IsNullOrWhiteSpace(urlpath) ? appSettings.appVerPath : urlpath;
+            try
+            {
+                return await identityManager.sendEmailVerfication(userId, apphost, _urlpath, force);
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw ex;
+            }
+        }
+        #endregion
+
+        #region General Internal Methods
+        public bool ValueChanged(string OldValue, string NewValue)
+        {
+            if (OldValue.ToUpper() != NewValue.ToUpper())
+            {
+                return true;
+            }
+            return false;
+        }
+        public string UpdateInput(string OldValue, string NewValue)
+        {
+            if (String.IsNullOrWhiteSpace(NewValue))
+            {
+                return OldValue;
+            }
+            if (ValueChanged(OldValue, NewValue))
+            {
+                return NewValue;
+            }
+            return OldValue;
+        }
+        #endregion
+
     }//Class
 }

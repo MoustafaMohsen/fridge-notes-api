@@ -1,16 +1,16 @@
 ﻿using FridgeServer._UserIdentity;
-using FridgeServer.Models._UserIdentity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace FridgeServer.Models.Dto
+namespace FridgeServer.Models
 {
-    public class UserDto : _IdentityUserDto
+    public class ApplicationUser: MyIdentityUser
     {
-    
+        public string secretId { get; set; }
+        public List<Grocery> userGroceries { get; set; }
         public List<UserFriend> userFriends { get; set; }
-        public string invitationcode { get; set; }
+
     }
 }
