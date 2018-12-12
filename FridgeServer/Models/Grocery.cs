@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FridgeServer.Models
 {
+
     public class Grocery
     {
         [Key]
@@ -21,7 +22,7 @@ namespace FridgeServer.Models
         public bool groceryOrBought { get; set; } = false; // false = Need / true=Bought
 
         [Required]
-        public int ownerid { get; set; }
+        public string ownerid { get; set; }
         public string owner { get; set; }
 
         public string excludeids { get; set; }
@@ -31,7 +32,9 @@ namespace FridgeServer.Models
         public string category { get; set; } = "";
 
         public string style { get; set; } = "";
-        public int Userid { get; set; }
+
+        // Foreign Key
+        public string ApplicationUserId { get; set; }
     }
 
 
@@ -45,6 +48,7 @@ namespace FridgeServer.Models
         public int? no { get; set; } = 1;
         public string typeOfNo { get; set; }
 
+        //Foreign Key
         public int Groceryid { get; set; }
     }
 

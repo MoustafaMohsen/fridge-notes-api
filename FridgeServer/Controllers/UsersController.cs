@@ -10,271 +10,285 @@ using FridgeServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using FridgeServer._UserIdentity;
+using FridgeServer._UserIdentity.Dto;
+using FridgeServer.Models._UserIdentity;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace FridgeServer.Controllers
 {
 
-    [Authorize]
     [ApiController]
+    [Produces("application/json")]
     [Route("api/[controller]")]
     public class UsersController : Controller
     {
         private IUserService userService;
         private IMapper mapper;
+
         public UsersController(IUserService _userService, IMapper _mapper)
         {
             userService = _userService;
             mapper = _mapper;
         }
         
-        //=======Admin Tools
-        //Get all user
-        [HttpGet]
-        public IActionResult GetAll()
-        {
-            var users = userService.GetAll();
-            var usersDtos = mapper.Map<List<UserDto>>(users);
-            return Ok(usersDtos);
-        }
 
-        //Get by id
-        [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        //Get User Id
+        [AuthTokenAny]
+        [HttpGet("GetUserId")]
+        public async Task<IActionResult> GetUserId()
         {
-            var user = userService.GetById(id);
-            var usersDtos = mapper.Map<UserDto>(user);
-            return Ok(user);
-        }
-
-        //Get all user
-        [HttpGet("FullUsers")]
-        public IActionResult GetFullUsers()
-        {
-            var users = userService.GetAll();
-            return Ok(users);
-        }
-
-        //Delete User
-        [HttpDelete("DeleteUser/{id}")]
-        public IActionResult DeleteUserById(int id)
-        {
+            var CurrentUserId = GetTokenId();
             try
             {
-                var editeduser = userService.Delete(id);
-                return Ok(editeduser);
+                var dtoUser = await userService.GetById_IncludeRole(CurrentUserId);
+                if (dtoUser == null)
+                {
+                    return BadRequest(ree("User doesn't Exsists"));
+                }
+                return Ok( ret(dtoUser,"Done") );
             }
             catch (AppException ex)
             {
-                return BadRequest(new { message = ex.Message, Exeption = ex });
+                return BadRequest(ree(ex.Message));
             }
-        }
-        //Admin Tools=======
-
-
-        //Get User Id
-        [HttpGet("GetUserId")]
-        public IActionResult GetUserId()
-        {
-            var CurrentUserId =int.Parse( HttpContext.User.Identity.Name );
-            var user = userService.GetById(CurrentUserId);
-            if (user==null)
-            {
-                return BadRequest("User doesn't Exsists");
-            }
-            var dtoUser = mapper.Map<UserDto>(user);
-            dtoUser.token = userService.GenerateUserToken(user.id, 7); ;
-            var response = new ResponseDto()
-            {
-                value = dtoUser,
-                statusText = "Done"
-            };
-            return Ok(response);
         }
 
         //Create a friend
+        [AuthTokenClient]
         [HttpPost("addfriend")]
-        public IActionResult AddFreindToMe([FromBody]FriendRequestDto friendRequestDto)
+        public async Task<IActionResult> AddFreindToMe([FromBody]FriendRequestDto friendRequestDto)
         {
-            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
-            friendRequestDto.userId = CurrentUserId;
+            friendRequestDto.userId = GetTokenId();
             try
             {
-                var response = new ResponseDto()
-                {
-                    value = userService.AddFreindToMe(friendRequestDto),
-                    statusText = "added"
-                };
-                return Ok(response);
+                UserFriend friend= await userService.AddFreindToMe(friendRequestDto);
+                return Ok(ret(friend,"added"));
             }
             catch (AppException ex)
             {
-                return BadRequest(ex);
+                return BadRequest( ree(ex.Message) );
             }
         }
 
         //Delete a friend
+        [AuthTokenClient]
         [HttpPost("deletefriendship")]
-        public IActionResult DeleteFriendship([FromBody]FriendRequestDto friendRequestDto)
+        public async Task<IActionResult> DeleteFriendship([FromBody]FriendRequestDto friendRequestDto)
         {
-            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
-            friendRequestDto.userId = CurrentUserId;
+            friendRequestDto.userId = GetTokenId();
             try
             {
-                var response = new ResponseDto()
-                {
-                    value = userService.DeleteFriendship(friendRequestDto),
-                    statusText = "deletet"
-                };
-                return Ok(response);
+                var isDeleted = await userService.DeleteFriendship(friendRequestDto);
+                return Ok( ret(isDeleted, isDeleted?"Deleted":"Error") );
             }
             catch (AppException ex)
             {
-                return BadRequest(ex);
+                return BadRequest(ree(ex.Message));
             }
         }
 
         //generateinvitation
+        [AuthTokenClient]
         [HttpGet("generateinvitation")]
-        public IActionResult GenerateInv()
+        public async Task<IActionResult> GenerateInv()
         {
-            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            var CurrentUserId = GetTokenId();
             try
             {
-                var invCode = userService.GenerateUserInvitaionCode(CurrentUserId);
-                var response = new ResponseDto() { statusText = "Generated", value = invCode };
-                return Ok(response);
-
+                var invCode = await userService.GenerateUserInvitaionCodeAsync(CurrentUserId);
+                return Ok(ret(invCode,"Generated"));
             }
             catch (AppException ex)
             {
-
-                return BadRequest(ex);
+                return BadRequest( ree(ex.Message) );
             }
             
         }
 
         //Edit User
+        [AuthTokenAny]
         [HttpPut("editUser")]
-        public IActionResult UpdateUser(UserDto userDto)
+        public async Task<IActionResult> UpdateUser(UserDto userDto)
         {
-            var user = mapper.Map<User>(userDto);
-            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
-            user.id = CurrentUserId;
+            var CurrentUserId = GetTokenId();
             try
             {
-                var editeduser = userService.Update(user, userDto.password);
+                var editeduser = await userService.Update(userDto);
                 var editeduserDto = mapper.Map<UserDto>(editeduser);
-                editeduserDto.token = userService.GenerateUserToken(editeduserDto.id, 7);
-                var response = new ResponseDto()
-                {
-                    statusText = "Done",
-                    value = editeduserDto
-                };
-                return Ok(response);
+                editeduserDto.token = await userService.GenerateUserToken(editeduser, 7);
+                return Ok(ret(editeduserDto,"Done"));
             }
             catch (AppException ex)
             {
-                return BadRequest(new { message = ex.Message, Exeption = ex });
+                return BadRequest( ree(ex.Message) );
             }
 
         }
+
         //Change password
+        [AuthTokenAny]
         [HttpPut("changepassword")]
-        public IActionResult ChangePassword(PasswordDto passwordDto)
+        public async Task<IActionResult> ChangePassword(UpdatePasswordDto passwordDto)
         {
 
-            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            var CurrentUserId = GetTokenId();
             if (CurrentUserId != passwordDto.id)
             {
-                return BadRequest("id Invalid");
+                return BadRequest(ree("id Invalid"));
             }
             passwordDto.id = CurrentUserId;
             try
             {
-                var editeduser = userService.ChangePassword(passwordDto);
+                var editeduser = await userService.ChangePassword(CurrentUserId,passwordDto.oldpassword,passwordDto.newpassword);
                 var editeduserDto = mapper.Map<UserDto>(editeduser);
-                var response = new ResponseDto()
-                    {
-                        statusText = "Done",
-                        value = editeduserDto
-                    };
-                if (response .value== null)
+                var statusText = M.isNull(editeduserDto) ? "Account Password is incorrect" : "Done";
+                if (M.isNull(editeduserDto))
                 {
-                    response.statusText = "Account Password is incorrect";
-                    return Ok(response);
+                    return Ok(ret(editeduserDto,statusText));
                 }
                 else
                 {
-                    editeduserDto.token = userService.GenerateUserToken(editeduserDto.id, 7);
-                    response.statusText = "Done";
-                    return Ok(response);
+                    return Ok(ret(editeduserDto, statusText));
                 }
             }
             catch (AppException ex)
             {
-                return BadRequest(new { message = ex.Message, Exeption = ex });
+                return BadRequest(ree(ex.Message));
             }
 
         }
+
         //Delete User
-        [HttpDelete("DeleteUser")]
-        public IActionResult DeleteUser()
+        [AuthTokenAny]
+        [HttpPut("DeleteUser")]
+        public async Task<IActionResult> DeleteUser(UserDto userDto)
         {
-            var CurrentUserId = int.Parse(HttpContext.User.Identity.Name);
+            var CurrentUserId = GetTokenId();
             try
             {
-                var editeduser = userService.Delete(CurrentUserId);
-                return Ok(editeduser);
+                var editeduser = await userService.Delete(CurrentUserId, userDto.password);
+                return Ok( ret(editeduser, editeduser?"Deleted":"Failed") );
             }
             catch (AppException ex)
             {
-                return BadRequest(new { message = ex.Message, Exeption = ex });
+                return BadRequest(ree(ex.Message));
             }
         }
 
 
         // Anonumous
         [AllowAnonymous]
-        [HttpPost("authenticate")]
-        public IActionResult AuthenticatePost([FromBody]UserDto userDto)
+        [HttpPost("login")]
+        public async Task<IActionResult> AuthenticatePost([FromBody]LoginUserDto userDto)
         {
-            var user = userService.Authenticate(userDto.username, userDto.password);
-            //If user not found
-            if (user == null)
-                return BadRequest(new { message = "Username or password is incorrect" });
-            //If user found
-            var GenerateDto = mapper.Map<UserDto>(user);
-            GenerateDto.token = userService.GenerateUserToken(user.id,7);
-            GenerateDto.invitationcode = EncryptionHelper.Encrypt(user.secretId);
-            return Ok(GenerateDto);
-        }
-        [AllowAnonymous]
-        [HttpPost("register")]
-        public IActionResult RegisterUser([FromBody]UserDto userDto)
-        {
-            var user = mapper.Map<User>(userDto);
+            UserDto user =null;
             try
             {
-                var registerdUser = userService.Create(user, userDto.password);
-                var returndto = mapper.Map<UserDto>(registerdUser);
-                returndto.token= userService.GenerateUserToken(user.id, 7);
-
-                return Ok(returndto);
+                user = await userService.Login(userDto);
+                return Ok( ret(user, "Login successful") );
             }
             catch (AppException ex)
             {
-                return BadRequest(new { message = ex.Message, Exeption = ex });
+                return BadRequest( ree("Username or password is incorrect") );
             }
         }
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<IActionResult> RegisterUser([FromBody]UserDto userDto)
+        {
+            try
+            {
+                var registerdUser = await userService.Create(userDto, userDto.password);
+                return Ok( ret(registerdUser,"User created") );
+            }
+            catch (AppException ex)
+            {
+                return Ok( ree(ex.Message) );
+            }
+        }
+
         //Dos User Exsits
         [AllowAnonymous]
         [HttpPost("UserExsits")]
-        public IActionResult DoesUserExsits([FromBody]UserDto userDto)
+        public async Task<IActionResult> DoesUserExsits([FromBody]UserDto userDto)
         {
-            var state = userService.IsUserNameExistsInDb(userDto.username);
-            return Ok(state);
+            try
+            {
+                var state = await userService.IsUserNameExists(userDto.UserName);
+                return Ok( ret(state,"done") );
+            }
+            catch (AppException ex)
+            {
+                return Ok( ree(ex.Message) );
+            }
         }
+
+
+        #region Response Converter
+        //response value
+        public ResponseDto<T> ret<T>(T value, string statusText)
+        {
+            var response = new ResponseDto<T>
+            {
+                statusText = statusText,
+                value = value
+            };
+            return response;
+        }
+
+        //response error
+        public ResponseDto ree(string error)
+        {
+            if (string.IsNullOrEmpty(error))
+            {
+                error = "error";
+            }
+            var response = new ResponseDto
+            {
+                errors = error
+            };
+            return response;
+        }
+        #endregion
+
+        #region Get User and Claim
+        public string GetTokenId()
+        {
+            var claims = HttpContext.User.Claims;
+            var claim = FindClaimNameIdentifier(claims);
+            if (claim != null)
+            {
+                return claim.Value;
+            }
+            return null;
+        }
+        public Claim FindClaim(IEnumerable<Claim> Eclaims, string ClaimType)
+        {
+            var claims = Eclaims.ToList();
+            for (int i = 0; i < claims.Count; i++)
+            {
+                var claim = claims[i];
+                if (claim.Type == ClaimType)
+                {
+                    return claim;
+                }
+
+            }
+            return null;
+        }
+        public Claim FindClaimNameIdentifier(IEnumerable<Claim> Eclaims)
+        {
+            return FindClaim(Eclaims, ClaimTypes.NameIdentifier);
+
+        }
+        public string GetHost()
+        {
+            return HttpContext.Request.Host.Value;
+        }
+        #endregion
     }//class
 }

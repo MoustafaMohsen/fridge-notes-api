@@ -12,10 +12,12 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Authorization;
 using FridgeServer.Helpers;
 using FridgeServer.Models.Dto;
+using System.Security.Claims;
+using FridgeServer._UserIdentity;
 
 namespace FridgeServer.Controllers
 {
-    [Authorize]
+
     [ApiController]
     [Produces("application/json")]
     [Route("api/[controller]")]
@@ -30,80 +32,78 @@ namespace FridgeServer.Controllers
             userService = _userService;
         }
 
+        [AuthTokenClient]
         [HttpGet("")]
-        public IActionResult GetGrocery()
+        public async Task<IActionResult> GetGrocery()
         {
-            var id = int.Parse(HttpContext.User.Identity.Name);
+            var Id = GetTokenId();
             try
             {
-                var response = new ResponseDto() { statusText = "loaded", value = groceriesService.GetGrocery(id) };
+                var groceries = await groceriesService.GetGrocery(Id);
+                return Ok( ret(groceries, "loaded") );
+            }
+            catch (AppException ex)
+            {
+                return Ok(ree(ex.Message));
+            }
+        }
+
+        [AuthTokenClient]
+        [HttpGet("grocerybyid")]
+        public async Task<IActionResult> GetGrocery([FromQuery(Name ="groceryid")] int GroceryId)
+        {
+            if (M.isNullOr0(GroceryId))
+            {
+                return BadRequest(ree("No id was sent"));
+            }
+            var Id = GetTokenId();
+            try
+            {
+                var response = new ResponseDto() { statusText = "loaded", value = await groceriesService.GetGroceryById(GroceryId, Id) };
                 return Ok(response);
             }
             catch (AppException ex)
             {
-                var response = BadRequest(ex);
-                return response;
+                return BadRequest(ree(ex.Message));
             }
         }
 
-        [HttpGet("{GroceryId}")]
-        public IActionResult GetGrocery([FromRoute] int GroceryId)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var userid = int.Parse(HttpContext.User.Identity.Name);
-            try
-            {
-                return Ok( groceriesService.GetGroceryById(GroceryId, userid) );
-            }
-            catch (AppException ex)
-            {
-                return BadRequest(ex);
-            }
-        }
-
+        [AuthTokenClient]
         [HttpPost("request/{req}")]
-        public IActionResult UpdateStatus([FromBody] GroceryDto groceryDto, [FromRoute] string req)
+        public async Task<IActionResult> UpdateStatus([FromBody] GroceryDto groceryDto, [FromRoute] string req)
         {
             var grocery = groceryDto.grocery;
             var givenid = groceryDto.userId;
-            var id = int.Parse(HttpContext.User.Identity.Name);
-            int? IdValidation;
-            if (givenid != id)
+            var Id = GetTokenId();
+            if ( givenid != Id )
             {
-                IdValidation = userService.IdValidation(userId: id, GevenId: givenid);
+                string IdValidation = await userService.UserIdOrFriendIs(Id,  givenid);
                 if (IdValidation==null)
                 {
-                    return BadRequest("Bad Grocery");
+                    return Ok(  ree("Grocery could not be found")  );
                 }
                 else
                 {
-                    id = (int)IdValidation;
+                    Id = IdValidation;
                 }
             }
             //Validations
-            if (!ModelState.IsValid) { return BadRequest(ModelState); }//validate
-            if (grocery.name == "") { return BadRequest("No Name"); }//validate
-            if (grocery == null) { return NotFound(); }//validate
+            if (grocery.name == "")
+                return BadRequest( ree("No Name") );
+            if (grocery == null)
+                return NotFound();
 
 
             if (req == "add")
             {
                 try
                 {
-                    groceriesService.AddGrocery(grocery, id);
-                    var response = new ResponseDto() {
-                        statusText="added",
-                        value=null
-                    };
-                    return Ok(response);
+                    var user =await groceriesService.AddGrocery(grocery, Id);
+                    return Ok( ret(user, "added") );
                 }
                 catch (AppException ex)
                 {
-                    return BadRequest(ex);
+                    return BadRequest(ree(ex.Message));
                 }
             }
             if (req == "needed")
@@ -111,85 +111,80 @@ namespace FridgeServer.Controllers
 
                 try
                 {
-                    groceriesService.neededGrocery(grocery, id);
+                    await groceriesService.neededGrocery(grocery, Id);
                     var response = new ResponseDto()
                     {
                         statusText = "needed",
                         value = null
                     };
-                    return Ok(response);
+                    return Ok(objRes(null,"needed") );
                 }
                 catch (AppException ex)
                 {
-                    return BadRequest(ex);
+                    return BadRequest(ree(ex.Message));
                 }
             }
             if (req == "bought")
             {
                 try
                 {
-                    groceriesService.boughtgrocery(grocery, id);
-                    var response = new ResponseDto()
-                    {
-                        statusText = "bought",
-                        value = null
-                    };
-                    return Ok(response);
+                    await groceriesService.boughtgrocery(grocery, Id);
+                    return Ok(objRes(null,"bought"));
                 }
                 catch (AppException ex)
                 {
-                    return BadRequest(ex);
+                    return BadRequest(ree(ex.Message));
                 }
             }
             if (req == "edit")
             {
                 try
                 {
-                    groceriesService.editgrocery(grocery, id);
+                    await groceriesService.editgrocery(grocery, Id);
                     var response = new ResponseDto()
                     {
                         statusText = "edited",
                         value = null
                     };
-                    return Ok(response);
+                    return Ok(objRes(null, "edited"));
                 }
                 catch (AppException ex)
                 {
-                    return BadRequest(ex);
+                    return BadRequest(ree(ex.Message));
                 }
             }
             if (req == "remove")
             {
                 try
                 {
-                    groceriesService.removegrocery(grocery, id);
+                    await groceriesService.removegrocery(grocery, Id);
                     var response = new ResponseDto()
                     {
                         statusText = "remove",
                         value = null
                     };
-                    return Ok(response);
+                    return Ok(objRes(null, "remove"));
                 }
                 catch (AppException ex)
                 {
-                    return BadRequest(ex);
+                    return BadRequest(ree(ex.Message));
                 }
             }
             if (req == "delete")
             {
                 try
                 {
-                    groceriesService.deletegrocery(grocery, id);
+                    await groceriesService.deletegrocery(grocery, Id);
                     var response = new ResponseDto()
                     {
                         statusText = "delete",
                         value = null
                     };
-                    return Ok(response);
+                    return Ok(objRes(null, "delete"));
                 }
                 catch (AppException ex)
                 {
-                    return BadRequest(ex);
+                    return BadRequest(ree(ex.Message));
                 }
 
             }
@@ -197,56 +192,99 @@ namespace FridgeServer.Controllers
             {
                 try
                 {
-                    var response = new ResponseDto()
-                    {
-                        statusText = groceriesService.guessgrocery(grocery),
-                        value = null
-                    };
-                    return Ok(response);
+                    var guessTime = groceriesService.guessgrocery(grocery);
+                    return Ok(ret(guessTime,"guessed"));
                 }
                 catch (AppException ex)
                 {
-                    return BadRequest(ex);
+                    return BadRequest( ree(ex.Message) );
                 }
             }
             if(req == "NameExists")
             {
-                if (!ModelState.IsValid)
-                {
-                    return null;
-                }
-                var response = new ResponseDto()
-                {
-                    statusText = "",
-                    value = groceriesService.GroceryExistsName(grocery.name, id)
-                };
-                return Ok(response);
+                var status = await groceriesService.GroceryExistsName(grocery.name, Id);
+                return Ok(ret(status, "done"));
             }
 
-            return BadRequest( String.Format(req) );
+            return BadRequest( ree( $"request not found, request:{String.Format(req)}" ) );
         }
 
         [HttpPost("nameExists")]
-        public IActionResult NameExists([FromBody] ValueDto valueDto)
+        public async Task<IActionResult> NameExists([FromBody] ValueDto valueDto)
         {
-            var id = int.Parse(HttpContext.User.Identity.Name);
-            if (!ModelState.IsValid)
-            {
-                var response1 = new ResponseDto()
-                {
-                    statusText = "BadRequest",
-                    value = false
-                };
-                return Ok(response1);
-            }
-            var response = new ResponseDto()
-            {
-                statusText = "",
-                value = groceriesService.GroceryExistsName(valueDto.value, id)
-            };
-            return Ok(response);
+            var Id = GetTokenId();
+            var status = await groceriesService.GroceryExistsName(valueDto.value, Id);
+            return Ok(ret(status,"done"));
         }
 
+        #region Response Converter
+        //response value
+        public ResponseDto<T> ret<T>(T value, string statusText)
+        {
+            var response = new ResponseDto<T>
+            {
+                statusText = statusText,
+                value = value
+            };
+            return response;
+        }
+
+        public ResponseDto objRes(object value, string statusText)
+        {
+            var response = new ResponseDto
+            {
+                statusText = statusText,
+                value = value
+            };
+            return response;
+        }
+
+        //response error
+        public ResponseDto ree(string error)
+        {
+            if (string.IsNullOrEmpty(error))
+            {
+                error = "error";
+            }
+            var response = new ResponseDto
+            {
+                errors = error
+            };
+            return response;
+        }
+        #endregion
+
+        #region Get User and Claim
+        public string GetTokenId()
+        {
+            var claims = HttpContext.User.Claims;
+            var claim = FindClaimNameIdentifier(claims);
+            if (claim != null)
+            {
+                return claim.Value;
+            }
+            return null;
+        }
+        public Claim FindClaim(IEnumerable<Claim> Eclaims, string ClaimType)
+        {
+            var claims = Eclaims.ToList();
+            for (int i = 0; i < claims.Count; i++)
+            {
+                var claim = claims[i];
+                if (claim.Type == ClaimType)
+                {
+                    return claim;
+                }
+
+            }
+            return null;
+        }
+        public Claim FindClaimNameIdentifier(IEnumerable<Claim> Eclaims)
+        {
+            return FindClaim(Eclaims, ClaimTypes.NameIdentifier);
+
+        }
+        #endregion
     }//class
 
 }//namespace
