@@ -383,7 +383,11 @@ namespace FridgeServer.Services
         }
         public async Task< List<ApplicationUser> > GetAllUsing_Db()
         {
-            return await db.Users.ToListAsync();
+            return await db.Users
+                .Include("userFriends")
+                .Include("userGroceries")
+                .Include("userGroceries.moreInformations")
+                .ToListAsync();
         }
 
         public async Task<bool> IsUserNameExists(string username)

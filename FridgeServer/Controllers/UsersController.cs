@@ -207,7 +207,7 @@ namespace FridgeServer.Controllers
             }
             catch (AppException ex)
             {
-                return Ok( ree(ex.Message) );
+                return BadRequest( ree(ex.Message) );
             }
         }
 
@@ -223,7 +223,7 @@ namespace FridgeServer.Controllers
             }
             catch (AppException ex)
             {
-                return Ok( ree(ex.Message) );
+                return BadRequest( ree(ex.Message) );
             }
         }
 
