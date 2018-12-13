@@ -4,11 +4,14 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using FridgeServer._UserIdentity;
+using FridgeServer.Data;
 using FridgeServer.Helpers;
 using FridgeServer.Models.Dto;
 using FridgeServer.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 
@@ -26,11 +29,16 @@ namespace FridgeServer.Controllers
         private IUserService userService;
         private IRunOnAppStart runOnAppStart;
         private AppSettings appSettings;
-        public AdminController(IUserService _userService, IRunOnAppStart _runOnAppStart,IOptions<AppSettings> _options)
+        private readonly IHostingEnvironment env;
+        private AppDbContext db;
+        public AdminController(IUserService _userService, IRunOnAppStart _runOnAppStart,IOptions<AppSettings> _options
+            , IHostingEnvironment _hostingEnvironment, AppDbContext _db)
         {
             appSettings = _options.Value;
             userService = _userService;
+            env = _hostingEnvironment;
             runOnAppStart = _runOnAppStart;
+            db = _db;
         }
 
         [HttpGet]
@@ -71,6 +79,10 @@ namespace FridgeServer.Controllers
         {
             if (setting.alreadyrun==false)
             {
+                if (env.IsProduction() )
+                {
+                    db.Database.Migrate();
+                }
                 await runOnAppStart.Start();
                 setting.alreadyrun = true;
                 return Ok( new { status="AdminCreated" } );
