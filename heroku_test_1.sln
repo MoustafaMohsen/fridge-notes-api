@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2026
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "heroku_test_1", "heroku_test_1\heroku_test_1.csproj", "{E9ACD3A9-3DA3-4C83-801C-772988C3B9FF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E9ACD3A9-3DA3-4C83-801C-772988C3B9FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9ACD3A9-3DA3-4C83-801C-772988C3B9FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9ACD3A9-3DA3-4C83-801C-772988C3B9FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9ACD3A9-3DA3-4C83-801C-772988C3B9FF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {035C6748-B2CF-4061-9577-2CDF89958CD9}
+	EndGlobalSection
+EndGlobal
