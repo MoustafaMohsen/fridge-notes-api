@@ -88,6 +88,11 @@ namespace FridgeServer
                 app.UseDatabaseErrorPage();
             }
             app.UseAuthentication();
+
+            //show debug exception page in production
+            app.UseDeveloperExceptionPage();
+            app.UseDatabaseErrorPage();
+
             app.UseMvc();
         }
     }
