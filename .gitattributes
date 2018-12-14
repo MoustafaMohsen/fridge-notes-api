@@ -61,4 +61,5 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
-#.gitignore merge=ours
+.gitignore merge=ours
+AppSettings/ merge=ours
