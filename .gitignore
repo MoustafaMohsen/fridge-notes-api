@@ -263,7 +263,6 @@ __pycache__/
 
 #===========MyIgnores
 #ignore appsettings
-#/*/[Aa]ppsettings.json
 /*/[Dd]ata.txt
 **/**/[Aa]ppsettings/
 *backup*.db
