@@ -262,6 +262,7 @@ __pycache__/
 
 #===========MyIgnores
 #ignore appsettings
-AppSettings/
 /*/[Dd]ata.txt
 *.db
+Dockerfile
+*.ps1
