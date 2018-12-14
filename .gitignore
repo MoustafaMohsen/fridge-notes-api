@@ -6,8 +6,7 @@
 *.user
 *.userosscache
 *.sln.docstates
-/*/[Dd]ata.txt
-/*/[Aa]ppsettings.json
+
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -262,6 +261,9 @@ paket-files/
 __pycache__/
 *.pyc
 
+#===========MyIgnores
 #ignore appsettings
+#/*/[Aa]ppsettings.json
+/*/[Dd]ata.txt
 **/**/[Aa]ppsettings/
-*.db
+*backup*.db
