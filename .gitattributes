@@ -61,8 +61,5 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+*.db binary
 .gitignore merge=ours
-AppSettings/* merge=ours
-*.Development.json merge=ours
-*.Production.json merge=ours
-*.Staging.json merge=ours
