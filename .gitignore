@@ -264,6 +264,7 @@ __pycache__/
 #ignore appsettings
 /*/[Dd]ata.txt
 *backup*.db
+AppSettings/
 
 **/Production
 **/Development
