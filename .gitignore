@@ -267,5 +267,6 @@ __pycache__/
 
 #===========MyIgnores
 #ignore appsettings
+AppSettings/
 /*/[Dd]ata.txt
 *backup*.db
