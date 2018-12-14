@@ -6,11 +6,6 @@
 *.user
 *.userosscache
 *.sln.docstates
-<<<<<<< HEAD
-
-=======
-/*/[Dd]ata.txt
->>>>>>> af9c481f4b210484b330eaa74492c35585541a15
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -269,3 +264,6 @@ __pycache__/
 #ignore appsettings
 /*/[Dd]ata.txt
 *backup*.db
+
+**/Production
+**/Development
