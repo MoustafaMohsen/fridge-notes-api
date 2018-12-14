@@ -62,4 +62,7 @@
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
 .gitignore merge=ours
-AppSettings/ merge=ours
+AppSettings/* merge=ours
+*.Development.json merge=ours
+*.Production.json merge=ours
+*.Staging.json merge=ours
