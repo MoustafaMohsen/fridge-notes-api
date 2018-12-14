@@ -269,4 +269,4 @@ __pycache__/
 #ignore appsettings
 /*/[Dd]ata.txt
 *backup*.db
-heroku_output/
+AppSettings/
