@@ -83,14 +83,51 @@ namespace FridgeServer.Controllers
                 {
                     db.Database.Migrate();
                 }
-                await runOnAppStart.Start();
+                var admintUser = await runOnAppStart.Start();
                 setting.alreadyrun = true;
-                return Ok( new { status="AdminCreated" } );
+                var appSettingsFile = appSettings;
+                var results = new { appSettingsFile, admintUser };
+                return Ok( ret(results, "admin created") );
             }
             return Unauthorized();
         }
 
 
+        //Run for the first time
+        [AllowAnonymous]
+        [HttpGet("islive")]
+        public async Task<IActionResult> islive()
+        {
+            var results = "islive";
+            return Ok(ret(results, "admin created"));
+        }
+
+        #region Response Converter
+        //response value
+        public ResponseDto<T> ret<T>(T value, string statusText)
+        {
+            var response = new ResponseDto<T>
+            {
+                statusText = statusText,
+                value = value
+            };
+            return response;
+        }
+
+        //response error
+        public ResponseDto ree(string error)
+        {
+            if (string.IsNullOrEmpty(error))
+            {
+                error = "error";
+            }
+            var response = new ResponseDto
+            {
+                errors = error
+            };
+            return response;
+        }
+        #endregion
 
         #region Get User and Claim
         public string GetTokenId()
@@ -100,15 +137,6 @@ namespace FridgeServer.Controllers
             if (claim != null)
             {
                 return claim.Value;
-            }
-            return null;
-        }
-        public string GetTokenUsername()
-        {
-            var name = HttpContext.User.Identity.Name;
-            if (name != null)
-            {
-                return name;
             }
             return null;
         }
@@ -130,6 +158,10 @@ namespace FridgeServer.Controllers
         {
             return FindClaim(Eclaims, ClaimTypes.NameIdentifier);
 
+        }
+        public string GetHost()
+        {
+            return HttpContext.Request.Host.Value;
         }
         #endregion
     }

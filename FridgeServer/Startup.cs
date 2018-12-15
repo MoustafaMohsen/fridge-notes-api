@@ -28,13 +28,24 @@ namespace FridgeServer
         {
             // path to sensetive appsettings jsons, keep out .git folder
             string PrivateAppsettiingsPath = "";
+            var pathtest = Path.Combine(env.ContentRootPath, "AppSettings");
 
-            // if in develpmnet
+
+            // if in Development
             if (env.IsDevelopment())
             {
                 PrivateAppsettiingsPath = Path.Combine(env.ContentRootPath, "..", "..", "Data", "AppSettings");
             }
-
+            // if in Production
+            if (env.IsProduction())
+            {
+                PrivateAppsettiingsPath = Path.Combine(env.ContentRootPath, "AppSettings");
+            }
+            // if in Staging
+            if (env.IsStaging())
+            {
+                PrivateAppsettiingsPath = Path.Combine(env.ContentRootPath, "AppSettings");
+            }
             // add settings files
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)

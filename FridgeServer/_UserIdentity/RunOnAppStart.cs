@@ -14,9 +14,9 @@ namespace FridgeServer._UserIdentity
 {
     public interface IRunOnAppStart
     {
-        Task Start();
+        Task<ApplicationUser> Start();
         Task CreateDefaultRoles();
-        Task CreateAdmin();
+        Task<ApplicationUser> CreateAdmin();
 
     }
     public class RunOnAppStart : IRunOnAppStart
@@ -42,12 +42,12 @@ namespace FridgeServer._UserIdentity
         }
         #endregion
 
-        public async Task Start()
+        public async Task<ApplicationUser> Start()
         {
             //Create Roles
             await CreateDefaultRoles();
             //Create admin
-            await CreateAdmin();
+            return await CreateAdmin();
         }
 
         #region Roles Creating
@@ -104,7 +104,7 @@ namespace FridgeServer._UserIdentity
         #endregion
 
         #region Create Admin
-        public async Task CreateAdmin()
+        public async Task<ApplicationUser> CreateAdmin()
         {
             var adminUesr = await mUserManager.FindByEmailAsync(appSettings.adminInfo.email);
             if (adminUesr==null)
@@ -128,6 +128,8 @@ namespace FridgeServer._UserIdentity
                     try
                     {
                         await mUserManager.AddToRoleAsync(AdminUser, MyRoles.admin);
+                        var FinalAdminUser = await mUserManager.FindByEmailAsync(appSettings.adminInfo.email);
+                        return FinalAdminUser;
                     }
                     catch (Exception ex)
                     {
@@ -144,7 +146,8 @@ namespace FridgeServer._UserIdentity
             else
             {
                 await AddAdminRole(adminUesr);
-                
+                var FinalAdminUser = await mUserManager.FindByEmailAsync(appSettings.adminInfo.email);
+                return FinalAdminUser;
             }
         }
         #endregion
