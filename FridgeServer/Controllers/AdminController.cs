@@ -98,8 +98,8 @@ namespace FridgeServer.Controllers
         [HttpGet("islive")]
         public async Task<IActionResult> islive()
         {
-            var results = "islive";
-            return Ok(ret(results, "admin created"));
+            var results = "yes";
+            return Ok(ret(results, "done"));
         }
 
         #region Response Converter
@@ -130,6 +130,15 @@ namespace FridgeServer.Controllers
         #endregion
 
         #region Get User and Claim
+        public string GetTokenUsername()
+        {
+            var name = HttpContext.User.Identity.Name;
+            if (name != null)
+            {
+                return name;
+            }
+            return null;
+        }
         public string GetTokenId()
         {
             var claims = HttpContext.User.Claims;
