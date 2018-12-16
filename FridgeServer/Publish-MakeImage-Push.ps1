@@ -1,4 +1,4 @@
-﻿#Name Mohesen 2018
+﻿#Moustafa Mohesen 2018
 #HardCoded Variables
 $appname = "linux-docker-5"
 $imagename = "fridge_api_1"
