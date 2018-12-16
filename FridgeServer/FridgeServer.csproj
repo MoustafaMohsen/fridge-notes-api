@@ -8,9 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models\NewFolder\**" />
     <Compile Remove="wwwroot\**" />
+    <Content Remove="Models\NewFolder\**" />
     <Content Remove="wwwroot\**" />
+    <EmbeddedResource Remove="Models\NewFolder\**" />
     <EmbeddedResource Remove="wwwroot\**" />
+    <None Remove="Models\NewFolder\**" />
     <None Remove="wwwroot\**" />
   </ItemGroup>
 
