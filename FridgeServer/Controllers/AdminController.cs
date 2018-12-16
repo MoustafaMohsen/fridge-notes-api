@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FridgeServer._UserIdentity;
 using FridgeServer.Data;
 using FridgeServer.Helpers;
+using FridgeServer.Models.Admin;
 using FridgeServer.Models.Dto;
 using FridgeServer.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,7 @@ namespace FridgeServer.Controllers
     static class setting
     {
         public static bool alreadyrun = false;
+        public static SiteStatus siteStatus { get; set; }
     }
 
     [AuthTokenManager]
@@ -83,13 +85,14 @@ namespace FridgeServer.Controllers
                 {
                     db.Database.Migrate();
                 }
-                var admintUser = await runOnAppStart.Start();
+                var siteStatus = await runOnAppStart.Start();
                 setting.alreadyrun = true;
                 var appSettingsFile = appSettings;
-                var results = new { appSettingsFile, admintUser };
+                setting.siteStatus = siteStatus;
+                var results = new { appSettingsFile, siteStatus };
                 return Ok( ret(results, "admin created") );
             }
-            return Unauthorized();
+            return NotFound();
         }
 
 
@@ -98,7 +101,7 @@ namespace FridgeServer.Controllers
         [HttpGet("islive")]
         public async Task<IActionResult> islive()
         {
-            var results = "yes";
+            var results = setting.siteStatus;
             return Ok(ret(results, "done"));
         }
 

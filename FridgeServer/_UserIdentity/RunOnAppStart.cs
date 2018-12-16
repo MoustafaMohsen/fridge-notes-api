@@ -9,14 +9,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using FridgeServer.Models;
+using FridgeServer.Models.Admin;
 
 namespace FridgeServer._UserIdentity
 {
     public interface IRunOnAppStart
     {
-        Task<ApplicationUser> Start();
+        Task<SiteStatus> Start();
         Task CreateDefaultRoles();
-        Task<ApplicationUser> CreateAdmin();
+        Task<SiteStatus> CreateAdmin();
 
     }
     public class RunOnAppStart : IRunOnAppStart
@@ -42,7 +43,7 @@ namespace FridgeServer._UserIdentity
         }
         #endregion
 
-        public async Task<ApplicationUser> Start()
+        public async Task<SiteStatus> Start()
         {
             //Create Roles
             await CreateDefaultRoles();
@@ -104,7 +105,7 @@ namespace FridgeServer._UserIdentity
         #endregion
 
         #region Create Admin
-        public async Task<ApplicationUser> CreateAdmin()
+        public async Task<SiteStatus> CreateAdmin()
         {
             var adminUesr = await mUserManager.FindByEmailAsync(appSettings.adminInfo.email);
             if (adminUesr==null)
@@ -129,7 +130,12 @@ namespace FridgeServer._UserIdentity
                     {
                         await mUserManager.AddToRoleAsync(AdminUser, MyRoles.admin);
                         var FinalAdminUser = await mUserManager.FindByEmailAsync(appSettings.adminInfo.email);
-                        return FinalAdminUser;
+
+                        var sitestatus = new SiteStatus();
+                        sitestatus.Admin = FinalAdminUser.Email;
+                        sitestatus.Alreadyrun = false;
+                        sitestatus.DatabaseStatus = "ok";
+                        return sitestatus;
                     }
                     catch (Exception ex)
                     {
@@ -147,7 +153,13 @@ namespace FridgeServer._UserIdentity
             {
                 await AddAdminRole(adminUesr);
                 var FinalAdminUser = await mUserManager.FindByEmailAsync(appSettings.adminInfo.email);
-                return FinalAdminUser;
+
+                var sitestatus = new SiteStatus();
+                sitestatus.Admin = FinalAdminUser.Email;
+                sitestatus.Alreadyrun = true;
+                sitestatus.DatabaseStatus = "ok";
+
+                return sitestatus;
             }
         }
         #endregion
