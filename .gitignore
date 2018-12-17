@@ -265,3 +265,4 @@ __pycache__/
 /*/[Dd]ata.txt
 *backup*.db
 AppSettings/
+#test
