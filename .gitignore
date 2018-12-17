@@ -265,4 +265,6 @@ __pycache__/
 /*/[Dd]ata.txt
 *backup*.db
 AppSettings/
+*.ps1
+Dockerfile
 #test
