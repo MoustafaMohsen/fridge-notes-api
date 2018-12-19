@@ -265,6 +265,7 @@ __pycache__/
 /*/[Dd]ata.txt
 *backup*.db
 AppSettings/
+*.db
 *.ps1
 Dockerfile
 #test

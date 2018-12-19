@@ -1,24 +1,19 @@
 ﻿using AutoMapper;
-using FridgeServer._UserIdentity;
-using FridgeServer._UserIdentity.Dto;
+using CoreUserIdentity._UserIdentity;
+using CoreUserIdentity.Models;
 using FridgeServer.Data;
-using FridgeServer.EmailService.SendGrid;
 using FridgeServer.Helpers;
 using FridgeServer.Models;
-using FridgeServer.Models._UserIdentity;
 using FridgeServer.Models.Dto;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
+using VerficationEmailSender.SendGrid;
 
 namespace FridgeServer.Services
 {
@@ -70,14 +65,14 @@ namespace FridgeServer.Services
         #region Protected Members
         private AppDbContext db;
         private AppSettings appSettings;
-        protected IUserIdentityManager identityManager;
+        protected IUserIdentityManager<ApplicationUser> identityManager;
         private IMapper mapper;
         #endregion
 
         #region Constructor
         public UserService(IOptions<AppSettings> options,
             AppDbContext _db,
-            IUserIdentityManager _identityManager,
+            IUserIdentityManager<ApplicationUser> _identityManager,
             IMapper _mapper
             )
         {

@@ -1,21 +1,15 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using AutoMapper;
+using CoreUserIdentity._UserIdentity;
+using FridgeServer.Data;
+using FridgeServer.Helpers;
+using FridgeServer.Models;
+using FridgeServer.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using FridgeServer.Data;
-using FridgeServer.Services;
-using Microsoft.EntityFrameworkCore;
-using FridgeServer.Helpers;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using System.Threading.Tasks;
-using AutoMapper;
-using FridgeServer.EmailService;
-using FridgeServer._UserIdentity;
-using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json.Serialization;
-using System.Diagnostics;
 using System.IO;
 
 namespace FridgeServer
@@ -53,6 +47,7 @@ namespace FridgeServer
                 .AddJsonFile($"{PrivateAppsettiingsPath}/appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"{PrivateAppsettiingsPath}/adminsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"{PrivateAppsettiingsPath}/mailsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"{PrivateAppsettiingsPath}/templatesettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
             Configuration = builder.Build();
         }
@@ -81,7 +76,19 @@ namespace FridgeServer
 
 
             // Add My Identity
-            services.AddMyUserIdentity<AppDbContext>(appSettings.jwt.SecretKey, appSettings.jwt.Audience, appSettings.jwt.Issuer);
+            services.AddMyUserIdentity<AppDbContext, ApplicationUser>(
+                x =>
+                {
+                    x.adminInfo = appSettings.adminInfo;
+                    x.apphost = appSettings.apphost;
+                    x.appVerPath = appSettings.appVerPath;
+                    x.emailSettings = appSettings.emailSettings;
+                    x.jwt = appSettings.jwt;
+                    x.sendGrid = appSettings.sendGrid;
+                },
+                appSettings.jwt.SecretKey, appSettings.jwt.Audience, appSettings.jwt.Issuer);
+
+            //services.AddMyUserIdentity<AppDbContext>(appSettings.jwt.SecretKey, appSettings.jwt.Audience, appSettings.jwt.Issuer);
 
 
             services.AddScoped< IGroceriesService, GroceriesService>();

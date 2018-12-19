@@ -9,12 +9,16 @@
 
   <ItemGroup>
     <Compile Remove="Models\NewFolder\**" />
+    <Compile Remove="Views\**" />
     <Compile Remove="wwwroot\**" />
     <Content Remove="Models\NewFolder\**" />
+    <Content Remove="Views\**" />
     <Content Remove="wwwroot\**" />
     <EmbeddedResource Remove="Models\NewFolder\**" />
+    <EmbeddedResource Remove="Views\**" />
     <EmbeddedResource Remove="wwwroot\**" />
     <None Remove="Models\NewFolder\**" />
+    <None Remove="Views\**" />
     <None Remove="wwwroot\**" />
   </ItemGroup>
 
@@ -24,16 +28,19 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="5.0.1" />
+    <PackageReference Include="CoreUserIdentity" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="2.1.1" />
 	    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.1" PrivateAssets="All" />
+	    <PackageReference Include="MLiberary" Version="2.0.0" />
 	    <PackageReference Include="Sendgrid" Version="9.10.0" />
+	    <PackageReference Include="VerficationEmailSender" Version="2.0.0" />
 
 	
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Views\" />
+    <Folder Include="Models\Admin\" />
   </ItemGroup>
 
 

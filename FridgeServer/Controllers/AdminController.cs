@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using FridgeServer._UserIdentity;
+using CoreUserIdentity._UserIdentity;
+using CoreUserIdentity.Models;
 using FridgeServer.Data;
 using FridgeServer.Helpers;
-using FridgeServer.Models.Admin;
+using FridgeServer.Models;
 using FridgeServer.Models.Dto;
 using FridgeServer.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -29,11 +30,11 @@ namespace FridgeServer.Controllers
     public class AdminController : Controller
     {
         private IUserService userService;
-        private IRunOnAppStart runOnAppStart;
+        private IRunOnAppStart<ApplicationUser> runOnAppStart;
         private AppSettings appSettings;
         private readonly IHostingEnvironment env;
         private AppDbContext db;
-        public AdminController(IUserService _userService, IRunOnAppStart _runOnAppStart,IOptions<AppSettings> _options
+        public AdminController(IUserService _userService, IRunOnAppStart<ApplicationUser> _runOnAppStart,IOptions<AppSettings> _options
             , IHostingEnvironment _hostingEnvironment, AppDbContext _db)
         {
             appSettings = _options.Value;
