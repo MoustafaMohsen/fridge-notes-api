@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using FridgeServer._UserIdentity;
+using CoreUserIdentity.Models;
 using FridgeServer.Models;
-using FridgeServer.Models._UserIdentity;
 using FridgeServer.Models.Dto;
 
 namespace FridgeServer.Helpers

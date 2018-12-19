@@ -1,8 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using FridgeServer.Models;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using FridgeServer._UserIdentity;
 
 namespace FridgeServer.Data
 {

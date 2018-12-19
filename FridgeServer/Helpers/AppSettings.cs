@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using VerficationEmailSender.Models;
+using static CoreUserIdentity.Models.CoreUserAppSettings;
 
 namespace FridgeServer.Helpers
 {
+    /*
     public class JwtAppSettings
     {
         public string SecretKey { get; set; }
@@ -29,11 +32,12 @@ namespace FridgeServer.Helpers
         public string email { get; set; }
         public string password { get; set; }
     }
+    */
     public class AppSettings
     {
         public SendGridAppSettings sendGrid { get; set; }
         public JwtAppSettings jwt { get; set; }
-        public EmailVerficationInfo EmailVerficationInfo { get; set; }
+        public EmailSettings emailSettings { get; set; }
         public AdminInfo adminInfo { get; set; }
         public string apphost { get; set; }
         public string appVerPath { get; set; }
