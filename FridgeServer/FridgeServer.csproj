@@ -28,22 +28,19 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="5.0.1" />
+    <PackageReference Include="CoreUserIdentity" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="2.1.1" />
 	    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.1" PrivateAssets="All" />
+	    <PackageReference Include="MLiberary" Version="2.0.0" />
 	    <PackageReference Include="Sendgrid" Version="9.10.0" />
+	    <PackageReference Include="VerficationEmailSender" Version="2.0.0" />
 
 	
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Models\Admin\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\core-users-identity\CoreUserIdentity\CoreUserIdentity\CoreUserIdentity.csproj" />
-    <ProjectReference Include="..\..\..\core-users-identity\MLiberary\MLiberary\MLiberary.csproj" />
-    <ProjectReference Include="..\..\..\core-users-identity\VerficationEmailSender\VerficationEmailSender\VerficationEmailSender.csproj" />
   </ItemGroup>
 
 
