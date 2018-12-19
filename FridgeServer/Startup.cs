@@ -84,7 +84,6 @@ namespace FridgeServer
                     x.appVerPath = appSettings.appVerPath;
                     x.emailSettings = appSettings.emailSettings;
                     x.jwt = appSettings.jwt;
-                    x.sendGrid = appSettings.sendGrid;
                 },
                 appSettings.jwt.SecretKey, appSettings.jwt.Audience, appSettings.jwt.Issuer);
 
