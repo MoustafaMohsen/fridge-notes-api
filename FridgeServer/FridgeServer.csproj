@@ -9,12 +9,16 @@
 
   <ItemGroup>
     <Compile Remove="Models\NewFolder\**" />
+    <Compile Remove="Views\**" />
     <Compile Remove="wwwroot\**" />
     <Content Remove="Models\NewFolder\**" />
+    <Content Remove="Views\**" />
     <Content Remove="wwwroot\**" />
     <EmbeddedResource Remove="Models\NewFolder\**" />
+    <EmbeddedResource Remove="Views\**" />
     <EmbeddedResource Remove="wwwroot\**" />
     <None Remove="Models\NewFolder\**" />
+    <None Remove="Views\**" />
     <None Remove="wwwroot\**" />
   </ItemGroup>
 
@@ -33,7 +37,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Views\" />
+    <Folder Include="Models\Admin\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core-users-identity\CoreUserIdentity\CoreUserIdentity\CoreUserIdentity.csproj" />
+    <ProjectReference Include="..\..\..\core-users-identity\MLiberary\MLiberary\MLiberary.csproj" />
+    <ProjectReference Include="..\..\..\core-users-identity\VerficationEmailSender\VerficationEmailSender\VerficationEmailSender.csproj" />
   </ItemGroup>
 
 

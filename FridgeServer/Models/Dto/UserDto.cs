@@ -1,9 +1,8 @@
-﻿using FridgeServer._UserIdentity;
-using FridgeServer.Models._UserIdentity;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CoreUserIdentity.Models;
 
 namespace FridgeServer.Models.Dto
 {

@@ -1,19 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using FridgeServer.Data;
-using FridgeServer.Models;
-using FridgeServer.Services;
-using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Authorization;
+﻿using CoreUserIdentity._UserIdentity;
 using FridgeServer.Helpers;
 using FridgeServer.Models.Dto;
+using FridgeServer.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using MLiberary;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
-using FridgeServer._UserIdentity;
+using System.Threading.Tasks;
 
 namespace FridgeServer.Controllers
 {
