@@ -35,7 +35,6 @@ namespace FridgeServer.Helpers
     */
     public class AppSettings
     {
-        public SendGridAppSettings sendGrid { get; set; }
         public JwtAppSettings jwt { get; set; }
         public EmailSettings emailSettings { get; set; }
         public AdminInfo adminInfo { get; set; }
