@@ -9,14 +9,48 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FridgeServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20181212184822_UsersAndGroceries_1")]
-    partial class UsersAndGroceries_1
+    [Migration("20181228032947_Initial")]
+    partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "2.1.1-rtm-30846");
+
+            modelBuilder.Entity("CoreUserIdentity.Models.ExternalLogin", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd();
+
+                    b.Property<string>("AccessToken");
+
+                    b.Property<string>("LoginProviderName");
+
+                    b.Property<string>("ProviderUserId");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ExternalLogin");
+                });
+
+            modelBuilder.Entity("CoreUserIdentity.Models.OtherValue", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd();
+
+                    b.Property<string>("ExternalLoginId");
+
+                    b.Property<string>("Name");
+
+                    b.Property<string>("Value");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalLoginId");
+
+                    b.ToTable("OtherValue");
+                });
 
             modelBuilder.Entity("FridgeServer.Models.ApplicationUser", b =>
                 {
@@ -33,9 +67,13 @@ namespace FridgeServer.Migrations
 
                     b.Property<bool>("EmailConfirmed");
 
-                    b.Property<string>("FirstName");
+                    b.Property<string>("ExternalLoginId");
 
-                    b.Property<string>("LastName");
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(255);
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(255);
 
                     b.Property<bool>("LockoutEnabled");
 
@@ -53,6 +91,9 @@ namespace FridgeServer.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed");
 
+                    b.Property<string>("PictureUrl")
+                        .HasMaxLength(2083);
+
                     b.Property<string>("SecurityStamp");
 
                     b.Property<bool>("TwoFactorEnabled");
@@ -60,9 +101,12 @@ namespace FridgeServer.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256);
 
-                    b.Property<string>("secretId");
+                    b.Property<string>("secretId")
+                        .HasMaxLength(512);
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExternalLoginId");
 
                     b.HasIndex("NormalizedEmail")
                         .HasName("EmailIndex");
@@ -83,21 +127,27 @@ namespace FridgeServer.Migrations
 
                     b.Property<bool>("basic");
 
-                    b.Property<string>("category");
+                    b.Property<string>("category")
+                        .HasMaxLength(265);
 
-                    b.Property<string>("excludeids");
+                    b.Property<string>("excludeids")
+                        .HasMaxLength(265);
 
                     b.Property<bool>("groceryOrBought");
 
                     b.Property<string>("name")
-                        .IsRequired();
+                        .IsRequired()
+                        .HasMaxLength(128);
 
-                    b.Property<string>("owner");
+                    b.Property<string>("owner")
+                        .HasMaxLength(265);
 
                     b.Property<string>("ownerid")
-                        .IsRequired();
+                        .IsRequired()
+                        .HasMaxLength(265);
 
-                    b.Property<string>("style");
+                    b.Property<string>("style")
+                        .HasMaxLength(512);
 
                     b.Property<long?>("timeout");
 
@@ -123,7 +173,8 @@ namespace FridgeServer.Migrations
 
                     b.Property<int?>("no");
 
-                    b.Property<string>("typeOfNo");
+                    b.Property<string>("typeOfNo")
+                        .HasMaxLength(64);
 
                     b.HasKey("id");
 
@@ -141,11 +192,14 @@ namespace FridgeServer.Migrations
 
                     b.Property<bool>("AreFriends");
 
-                    b.Property<string>("friendEncryptedCode");
+                    b.Property<string>("friendEncryptedCode")
+                        .HasMaxLength(255);
 
-                    b.Property<string>("friendUserId");
+                    b.Property<string>("friendUserId")
+                        .HasMaxLength(255);
 
-                    b.Property<string>("friendUsername");
+                    b.Property<string>("friendUsername")
+                        .HasMaxLength(255);
 
                     b.HasKey("id");
 
@@ -259,6 +313,20 @@ namespace FridgeServer.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens");
+                });
+
+            modelBuilder.Entity("CoreUserIdentity.Models.OtherValue", b =>
+                {
+                    b.HasOne("CoreUserIdentity.Models.ExternalLogin")
+                        .WithMany("OtherUserInfo")
+                        .HasForeignKey("ExternalLoginId");
+                });
+
+            modelBuilder.Entity("FridgeServer.Models.ApplicationUser", b =>
+                {
+                    b.HasOne("CoreUserIdentity.Models.ExternalLogin", "ExternalLogin")
+                        .WithMany()
+                        .HasForeignKey("ExternalLoginId");
                 });
 
             modelBuilder.Entity("FridgeServer.Models.Grocery", b =>

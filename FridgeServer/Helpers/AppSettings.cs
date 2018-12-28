@@ -33,6 +33,12 @@ namespace FridgeServer.Helpers
         public string password { get; set; }
     }
     */
+    public class ExternalLoginCredential
+    {
+        public string client_id { get; set; }
+        public string client_secret { get; set; }
+        public string redirect_url { get; set; }
+    }
     public class AppSettings
     {
         public JwtAppSettings jwt { get; set; }
@@ -40,5 +46,9 @@ namespace FridgeServer.Helpers
         public AdminInfo adminInfo { get; set; }
         public string apphost { get; set; }
         public string appVerPath { get; set; }
+        public string adminaccesscode { get; set; }
+        public ExternalLoginCredential facebookapp { get; set; }
+        public ExternalLoginCredential googleapp { get; set; }
+
     }
 }
