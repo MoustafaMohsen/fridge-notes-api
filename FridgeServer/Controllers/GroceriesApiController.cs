@@ -46,13 +46,25 @@ namespace FridgeServer.Controllers
 
         [AuthTokenClient]
         [HttpGet("grocerybyid")]
-        public async Task<IActionResult> GetGrocery([FromQuery(Name ="groceryid")] int GroceryId)
+        public async Task<IActionResult> GetGrocery([FromQuery(Name ="groceryid")] int GroceryId, [FromQuery(Name = "friend")] string friendId)
         {
+            var Id = GetTokenId();
+            if (friendId != Id && string.IsNullOrWhiteSpace(friendId))
+            {
+                string IdValidation = await userService.UserIdOrFriendId(Id, friendId);
+                if (IdValidation == null)
+                {
+                    return Ok(ree("Grocery could not be found"));
+                }
+                else
+                {
+                    Id = IdValidation;
+                }
+            }
             if (M.isNullOr0(GroceryId))
             {
                 return BadRequest(ree("No id was sent"));
             }
-            var Id = GetTokenId();
             try
             {
                 var response = new ResponseDto() { statusText = "loaded", value = await groceriesService.GetGroceryById(GroceryId, Id) };
@@ -73,7 +85,7 @@ namespace FridgeServer.Controllers
             var Id = GetTokenId();
             if ( givenid != Id )
             {
-                string IdValidation = await userService.UserIdOrFriendIs(Id,  givenid);
+                string IdValidation = await userService.UserIdOrFriendId(Id,  givenid);
                 if (IdValidation==null)
                 {
                     return Ok(  ree("Grocery could not be found")  );
@@ -104,15 +116,9 @@ namespace FridgeServer.Controllers
             }
             if (req == "needed")
             {
-
                 try
                 {
-                    await groceriesService.neededGrocery(grocery, Id);
-                    var response = new ResponseDto()
-                    {
-                        statusText = "needed",
-                        value = null
-                    };
+                    await groceriesService.neededGrocery(grocery, Id,true);
                     return Ok(objRes(null,"needed") );
                 }
                 catch (AppException ex)
@@ -124,7 +130,7 @@ namespace FridgeServer.Controllers
             {
                 try
                 {
-                    await groceriesService.boughtgrocery(grocery, Id);
+                    await groceriesService.boughtgrocery(grocery, Id,true);
                     return Ok(objRes(null,"bought"));
                 }
                 catch (AppException ex)
@@ -137,11 +143,6 @@ namespace FridgeServer.Controllers
                 try
                 {
                     await groceriesService.editgrocery(grocery, Id);
-                    var response = new ResponseDto()
-                    {
-                        statusText = "edited",
-                        value = null
-                    };
                     return Ok(objRes(null, "edited"));
                 }
                 catch (AppException ex)
@@ -154,11 +155,6 @@ namespace FridgeServer.Controllers
                 try
                 {
                     await groceriesService.removegrocery(grocery, Id);
-                    var response = new ResponseDto()
-                    {
-                        statusText = "remove",
-                        value = null
-                    };
                     return Ok(objRes(null, "remove"));
                 }
                 catch (AppException ex)
@@ -171,11 +167,6 @@ namespace FridgeServer.Controllers
                 try
                 {
                     await groceriesService.deletegrocery(grocery, Id);
-                    var response = new ResponseDto()
-                    {
-                        statusText = "delete",
-                        value = null
-                    };
                     return Ok(objRes(null, "delete"));
                 }
                 catch (AppException ex)
@@ -205,6 +196,7 @@ namespace FridgeServer.Controllers
             return BadRequest( ree( $"request not found, request:{String.Format(req)}" ) );
         }
 
+        [AuthTokenClient]
         [HttpPost("nameExists")]
         public async Task<IActionResult> NameExists([FromBody] ValueDto valueDto)
         {

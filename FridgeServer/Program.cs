@@ -23,7 +23,8 @@ namespace FridgeServer
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-             // .UseDefaultServiceProvider(options =>options.ValidateScopes = false)
+                //.UseSetting("https_port", "6291")
+                // .UseDefaultServiceProvider(options =>options.ValidateScopes = false)
                 .Build();
     }
 }

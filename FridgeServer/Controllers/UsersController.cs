@@ -8,7 +8,9 @@ using FridgeServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MLiberary;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -25,18 +27,36 @@ namespace FridgeServer.Controllers
     {
         private IUserService userService;
         private IMapper mapper;
-
         public UsersController(IUserService _userService, IMapper _mapper)
         {
             userService = _userService;
             mapper = _mapper;
         }
-        
+
+        [AuthTokenAny]
+        [HttpGet("")]
+        public async Task<IActionResult> GetUserId()
+        {
+            var CurrentUserId = GetTokenId();
+            try
+            {
+                var dtoUser = await userService.GetById_IncludeRole(CurrentUserId);
+                if (dtoUser == null)
+                {
+                    return BadRequest(ree("User doesn't Exsists"));
+                }
+                return Ok(ret(dtoUser, "Done"));
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(ree(ex.Message));
+            }
+        }
 
         //Get User Id
         [AuthTokenAny]
         [HttpGet("GetUserId")]
-        public async Task<IActionResult> GetUserId()
+        public async Task<IActionResult> GetUserId_1()
         {
             var CurrentUserId = GetTokenId();
             try
@@ -176,6 +196,23 @@ namespace FridgeServer.Controllers
             }
         }
 
+        //Delete User
+        [AuthTokenAny]
+        [HttpDelete("DeleteUser")]
+        public async Task<IActionResult> DeleteUser()
+        {
+            var CurrentUserId = GetTokenId();
+            try
+            {
+                var editeduser = await userService.DeleteNoPassword(CurrentUserId);
+                return Ok(ret(editeduser, editeduser ? "Deleted" : "Failed"));
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(ree(ex.Message));
+            }
+        }
+
 
         // Anonumous
         [AllowAnonymous]
@@ -188,7 +225,7 @@ namespace FridgeServer.Controllers
                 user = await userService.Login(userDto);
                 return Ok( ret(user, "Login successful") );
             }
-            catch (AppException ex)
+            catch (Exception ex)
             {
                 return BadRequest( ree("Username or password is incorrect") );
             }
@@ -203,12 +240,59 @@ namespace FridgeServer.Controllers
                 var registerdUser = await userService.Create(userDto, userDto.password);
                 return Ok( ret(registerdUser,"User created") );
             }
-            catch (AppException ex)
+            catch (Exception ex)
             {
                 return BadRequest( ree(ex.Message) );
             }
         }
 
+        [AllowAnonymous]
+        [HttpPost("external-facebook")]
+        public async Task<IActionResult> Creata_Login_UserFacebook([FromQuery(Name = "code")]string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return BadRequest(ree("Bad Parameters"));
+            }
+            try
+            {
+                var fridgeExternalResults = await userService.Facebook_Login_Register( code);
+                if (!fridgeExternalResults.isSuccessful)
+                {
+                    return BadRequest(ree(fridgeExternalResults.errors));
+                }
+                return Ok(ret(fridgeExternalResults.User, "Logged in"));
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ree(ex.Message));
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("external-google")]
+        public async Task<IActionResult> Creata_Login_UserGoogle([FromQuery(Name = "code")]string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return BadRequest(ree("Bad Parameters"));
+            }
+            try
+            {
+                var fridgeExternalResults = await userService.Google_Login_Register(code);
+                if (!fridgeExternalResults.isSuccessful)
+                {
+                    return BadRequest(ree(fridgeExternalResults.errors));
+                }
+                return Ok(ret(fridgeExternalResults.User, "Logged in"));
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ree("authentication failed"));
+            }
+        }
         //Dos User Exsits
         [AllowAnonymous]
         [HttpPost("UserExsits")]
