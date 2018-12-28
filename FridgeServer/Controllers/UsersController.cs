@@ -61,7 +61,7 @@ namespace FridgeServer.Controllers
             var CurrentUserId = GetTokenId();
             try
             {
-                var dtoUser = await userService.GetById_IncludeRole(CurrentUserId);
+                var dtoUser = await userService.GetUserById_include_roles_externalLogin(CurrentUserId);
                 if (dtoUser == null)
                 {
                     return BadRequest(ree("User doesn't Exsists"));
@@ -129,19 +129,30 @@ namespace FridgeServer.Controllers
         //Edit User
         [AuthTokenAny]
         [HttpPut("editUser")]
-        public async Task<IActionResult> UpdateUser(UserDto userDto)
+        public async Task<IActionResult> UpdateUser(UserDto userDto,[FromQuery(Name ="force")]bool force=false)
         {
             var CurrentUserId = GetTokenId();
             try
             {
-                var editeduser = await userService.Update(userDto);
-                var editeduserDto = mapper.Map<UserDto>(editeduser);
+                if (force&&string.IsNullOrWhiteSpace(userDto.externalProvider))
+                {
+                    return BadRequest(ree("authentication problem, please try relogin"));
+                }
+                bool requirePassword = !force;
+                var editeduser = await userService.Update(userDto, requirePassword);
+                var applicationUser =await userService.GetUserById_include_roles_externalLogin(editeduser.Id);
+                var editeduserDto = mapper.Map<UserDto>(applicationUser);
                 editeduserDto.token = await userService.GenerateUserToken(editeduser, 7);
                 return Ok(ret(editeduserDto,"Done"));
+                
             }
             catch (AppException ex)
             {
                 return BadRequest( ree(ex.Message) );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ree(ex.Message));
             }
 
         }
@@ -149,7 +160,7 @@ namespace FridgeServer.Controllers
         //Change password
         [AuthTokenAny]
         [HttpPut("changepassword")]
-        public async Task<IActionResult> ChangePassword(UpdatePasswordDto passwordDto)
+        public async Task<IActionResult> ChangePassword(UpdatePasswordDto passwordDto, [FromQuery(Name = "force")]bool force = false)
         {
 
             var CurrentUserId = GetTokenId();
@@ -160,17 +171,15 @@ namespace FridgeServer.Controllers
             passwordDto.id = CurrentUserId;
             try
             {
-                var editeduser = await userService.ChangePassword(CurrentUserId,passwordDto.oldpassword,passwordDto.newpassword);
-                var editeduserDto = mapper.Map<UserDto>(editeduser);
-                var statusText = M.isNull(editeduserDto) ? "Account Password is incorrect" : "Done";
-                if (M.isNull(editeduserDto))
+                if (force && string.IsNullOrWhiteSpace(passwordDto.externalProvider))
                 {
-                    return Ok(ret(editeduserDto,statusText));
+                    return BadRequest(ree("authentication problem, please try relogin"));
                 }
-                else
-                {
-                    return Ok(ret(editeduserDto, statusText));
-                }
+                var editeduser = await userService.UpdatePasswordForceAsync(CurrentUserId,passwordDto.newpassword, passwordDto.externalProvider);
+                var applicationUser = await userService.GetUserById_include_roles_externalLogin(editeduser.Id);
+                var editeduserDto = mapper.Map<UserDto>(applicationUser);
+                var statusText = "Done";
+                return Ok(ret(editeduserDto,statusText));
             }
             catch (AppException ex)
             {
@@ -293,6 +302,7 @@ namespace FridgeServer.Controllers
                 return BadRequest(ree("authentication failed"));
             }
         }
+
         //Dos User Exsits
         [AllowAnonymous]
         [HttpPost("UserExsits")]

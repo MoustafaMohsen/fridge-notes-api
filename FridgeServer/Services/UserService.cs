@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using CoreUserIdentity._UserIdentity;
+using CoreUserIdentity.Helpers;
 using CoreUserIdentity.Models;
 using CoreUserIdentity.Models.OAuth;
 using FridgeServer.Data;
@@ -30,6 +31,8 @@ namespace FridgeServer.Services
         Task<FridgeExternalRegisterLoginResults> Facebook_Login_Register(string code);
         Task<FridgeExternalRegisterLoginResults> Google_Login_Register(string code);
         Task<ApplicationUser> ChangePassword(string userid, string oldpassword, string newpassword);
+        Task<ApplicationUser> UpdatePasswordForceAsync(string userId, string newPassword, string externalProvider = null);
+        Task<bool> CheckExternalProvider(string userid, string externalprovider);
         Task<bool> Delete(string userid, string password);
         Task<ApplicationUser> GetFullUser(string userid);
         Task<bool> DeleteNoPassword(string userid);
@@ -53,6 +56,7 @@ namespace FridgeServer.Services
         #region Helper Methods
         Task<ApplicationUser> GetById_Db(string id);
         Task<ApplicationUser> GetById_Manager(string Id);
+        Task<UserDto> GetUserById_include_roles_externalLogin(string userId);
         Task<UserDto> GetById_IncludeRole(string Id);
         Task<bool> IsUserNameExists(string username);
         Task<bool> IsUserameUnique(string username);
@@ -113,6 +117,26 @@ namespace FridgeServer.Services
                 throw ex;
             }
         }
+
+        public async Task<UserDto> GetUserById_include_roles_externalLogin(string userId)
+        {
+            try
+            {
+                var _uesrDro = await identityManager.GetUserById_Roles_externalLogins(userId);
+                if (_uesrDro==null)
+                {
+                    return null;
+                }
+                var userDto = mapper.Map<UserDto>(_uesrDro);
+                userDto.userFriends = await GetFriends(userDto.Id);
+                return userDto;
+            }
+            catch (AppException ex)
+            {
+                throw ex;
+            }
+        }
+
         public async Task<ApplicationUser> RegisterBasicInfo(ApplicationUser user)
         {
             user.secretId = CreateSecret(user.Id);
@@ -192,6 +216,7 @@ namespace FridgeServer.Services
                 var userDto = mapper.Map<UserDto>(_IdentityUserDto);
                 userDto.userFriends = appicationUser.userFriends;
                 userDto.invitationcode = appicationUser.secretId;
+                userDto.externalProvider = (await identityManager.GetExternalLoginAsync(userDto.Id))?.LoginProviderName;
                 // pack results
                 FridgeExternalRegisterLoginResults fridgeExternalRegister = new FridgeExternalRegisterLoginResults()
                 {
@@ -213,7 +238,7 @@ namespace FridgeServer.Services
                 var userDto = mapper.Map<UserDto>(_IdentityUserDto);
                 userDto.userFriends = appicationUser.userFriends;
                 userDto.invitationcode = appicationUser.secretId;
-
+                userDto.externalProvider = (await identityManager.GetExternalLoginAsync(userDto.Id))?.LoginProviderName;
                 // pack results
                 FridgeExternalRegisterLoginResults fridgeExternalLogin = new FridgeExternalRegisterLoginResults()
                 {
@@ -240,6 +265,41 @@ namespace FridgeServer.Services
         {
             var user = await identityManager.UpdatePasswordAsync(userid, oldpassword, newpassword);
             return user;
+        }
+
+        public async Task<ApplicationUser> UpdatePasswordForceAsync(string userId, string newPassword,string externalProvider=null)
+        {
+            try
+            {
+                // has external provider
+                if (!string.IsNullOrWhiteSpace(externalProvider))
+                {
+                    var result = await identityManager.CheckExternalProvider(userId, externalProvider);
+                    // if provider mismatch
+                    if (!result)
+                    {
+                        throw new AppException("bad provider");
+                    }
+                    var user = await identityManager.UpdatePasswordForceAsync(userId,newPassword);
+                    return user;
+                }
+                else
+                {
+                    var user = await identityManager.UpdatePasswordForceAsync(userId, newPassword);
+                    return user;
+                }
+            }
+            catch (CoreUserAppException ex)
+            {
+                throw new AppException(ex.Message);
+            }
+
+        }
+
+        public async Task<bool> CheckExternalProvider(string userid, string externalprovider)
+        {
+            var restuls = await identityManager.CheckExternalProvider(userid, externalprovider);
+            return restuls;
         }
 
         public async Task<bool> Delete(string userid, string password)
