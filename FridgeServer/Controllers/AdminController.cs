@@ -77,34 +77,37 @@ namespace FridgeServer.Controllers
 
         //Run for the first time
         [AllowAnonymous]
-        [HttpGet("runonfirsttime")]
-        public async Task<IActionResult> RunForFirstTime()
+        [HttpGet("runonfirsttime/{code}")]
+        public async Task<IActionResult> RunForFirstTime(string code,[FromQuery(Name ="force")]bool force=false)
         {
-            if (setting.alreadyrun==false)
+            // check that the provided code is correct
+            var admincode = appSettings.adminaccesscode;
+            if (admincode != code)
+                return NotFound();
+            
+            if (setting.alreadyrun==false || force)
             {
+                setting.alreadyrun = true;
                 if (env.IsProduction() )
                 {
                     db.Database.Migrate();
                 }
                 var siteStatus = await runOnAppStart.Start();
-                setting.alreadyrun = true;
                 var appSettingsFile = appSettings;
                 setting.siteStatus = siteStatus;
                 var results = new { appSettingsFile, siteStatus };
                 return Ok( ret(results, "admin created") );
             }
-            return NotFound();
+            else
+            {
+                var siteStatus = setting.siteStatus;
+                var appSettingsFile = appSettings;
+                var results = new { appSettingsFile, siteStatus };
+                return Ok(ret(results, "admin already run"));
+            }
+
         }
 
-
-        //Run for the first time
-        [AllowAnonymous]
-        [HttpGet("islive")]
-        public async Task<IActionResult> islive()
-        {
-            var results = setting.siteStatus;
-            return Ok(ret(results, "done"));
-        }
 
         #region Response Converter
         //response value

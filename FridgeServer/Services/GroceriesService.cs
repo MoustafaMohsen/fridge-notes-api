@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MLiberary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -16,13 +17,16 @@ namespace FridgeServer.Services
         Task<List<Grocery>> GetGrocery(string userId);
         Task<Grocery> GetGroceryById(int Groceryid, string userId);
         Task<ApplicationUser> AddGrocery(Grocery grocery, string userId);
-        Task neededGrocery(Grocery grocery, string userId);
-        Task<string> boughtgrocery(Grocery grocery, string userId);
+        Task<bool> CheckGroceryState(int Groceryid, string userId, bool bought);
+        bool CheckGroceryState(Grocery grocery, bool bought);
+        Task neededGrocery(Grocery grocery, string userId, bool checkfirst);
+        Task<string> boughtgrocery(Grocery grocery, string userId, bool checkfirst);
         Task<string> editgrocery(Grocery grocery, string userId);
         Task<string> removegrocery(Grocery grocery, string userId);
         Task<string> deletegrocery(Grocery grocery, string userId);
         string guessgrocery(Grocery grocery);
         Task<bool> GroceryExistsName(string name, string userId);
+        bool IsGoodGrocery(Grocery grocery, bool strict = false);
 
     }
     public class GroceriesService : IGroceriesService
@@ -132,11 +136,70 @@ namespace FridgeServer.Services
             return grocery;
         }
 
+        public async Task<bool> CheckGroceryState(int Groceryid, string userId,bool bought)
+        {
+            var grocery = await GetSpecificGroceryForUser(Groceryid, userId);
+
+            if (grocery == null)
+            {
+                throw new AppException("Not Found");
+            }
+            var results = grocery.groceryOrBought == bought;
+            return results;
+        }
+
+        public bool CheckGroceryState(Grocery grocery, bool bought)
+        {
+            if (grocery == null)
+            {
+                throw new AppException("Not Found");
+            }
+            var results = grocery.groceryOrBought == bought;
+            return results;
+        }
+        public bool IsGoodGrocery(Grocery grocery,bool strict = false)
+        {
+            var IsGood = true;
+            if (M.isNull(grocery))
+            {
+                return !IsGood;
+            }
+            IsGood = !(
+                string.IsNullOrWhiteSpace(grocery.name) ||
+                string.IsNullOrWhiteSpace(grocery.ownerid) ||
+                string.IsNullOrWhiteSpace(grocery.owner)
+                )
+                ;
+            if (strict)
+            {
+                IsGood = !(
+                    string.IsNullOrWhiteSpace(grocery.name) ||
+                    string.IsNullOrWhiteSpace(grocery.ownerid) ||
+                    string.IsNullOrWhiteSpace(grocery.owner) ||
+                    M.isNullOr0(grocery.id)
+                    )
+                    ;
+            }
+            else
+            {
+                IsGood = !(
+                    string.IsNullOrWhiteSpace(grocery.name) ||
+                    string.IsNullOrWhiteSpace(grocery.ownerid) ||
+                    string.IsNullOrWhiteSpace(grocery.owner)
+                    )
+                    ;
+            }
+            return IsGood;
+        }
         public async Task<ApplicationUser> AddGrocery(Grocery grocery,string userId)
         {
+            if ( !IsGoodGrocery(grocery) )
+            {
+                throw new AppException("Bad Item");
+            }
             //--------------add logic-------------//
             //Validation
-            if (await GroceryExistsName(grocery.name, userId)) { throw new AppException("Username Already Exists, Try new one");  }//validate
+            if (await GroceryExistsName(grocery.name, userId)) { throw new AppException("Grocery Name Already Exists, Try new one");  }//validate
 
             grocery.moreInformations = UpdateInformationsAdd(grocery.moreInformations);
 
@@ -149,43 +212,74 @@ namespace FridgeServer.Services
                 user.userGroceries = new List<Grocery>();
             }
             user.userGroceries.Add(grocery);
-
-            var userEntity = db.Users.Update(user);
-            await db.SaveChangesAsync();
-            return userEntity.Entity;
+            try
+            {
+                var userEntity = db.Users.Update(user);
+                await db.SaveChangesAsync();
+                return userEntity.Entity;
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw new AppException("Database Error");
+            }
         }
 
-        public async Task neededGrocery(Grocery grocery, string userId)
+        public async Task neededGrocery(Grocery grocery, string userId,bool checkfirst)
         {
 
             var editgrocery = await GetSpecificGroceryForUser(grocery.id, userId);
 
             if (editgrocery == null) { throw new AppException("No grocery was found"); }//validate
-
+            // check state first
+            if (checkfirst)
+            {
+                bool supposedToBe = grocery.groceryOrBought;
+                var results = CheckGroceryState(editgrocery, supposedToBe);
+                if (results)
+                {
+                    throw new AppException("Item Already updated");
+                }
+            }
             editgrocery.timeout = 0;//override the timeout
 
             var more = UpdateInformationsList(editgrocery.moreInformations, false);
             editgrocery.moreInformations.Add(more);
             editgrocery.groceryOrBought = false;
-            db.Entry(editgrocery).State = EntityState.Modified;
 
             try
             {
+                db.Entry(editgrocery).State = EntityState.Modified;
                 await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
                 throw new AppException("DbUpdateConcurrencyException");
             }
+            catch(Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw new AppException("Database Error");
+            }
             return ;
         }
 
-        public async Task<string> boughtgrocery(Grocery grocery, string userId)
+        public async Task<string> boughtgrocery(Grocery grocery, string userId,bool checkfirst)
         {
             var editgrocery = await GetSpecificGroceryForUser(grocery.id, userId);
 
             if (editgrocery == null) { throw new AppException("Id Not found");  }//validate
-
+            if (checkfirst)
+            {
+                bool supposedToBe = grocery.groceryOrBought;
+                var results = CheckGroceryState(editgrocery, supposedToBe);
+                if (results)
+                {
+                    throw new AppException("Item Already updated");
+                }
+            }
             editgrocery.timeout = HandleTimeout(editgrocery, grocery.timeout);
 
 
@@ -193,14 +287,20 @@ namespace FridgeServer.Services
             var more = UpdateInformationsList(editgrocery.moreInformations, true);
             editgrocery.moreInformations.Add(more);
             editgrocery.groceryOrBought = true;
-            db.Entry(editgrocery).State = EntityState.Modified;
             try
             {
+                db.Entry(editgrocery).State = EntityState.Modified;
                 await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
                 throw new AppException("DbUpdateConcurrencyException");
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw new AppException("Database Error");
             }
             return "bought";
         }
@@ -215,10 +315,10 @@ namespace FridgeServer.Services
             editgrocery.name= grocery.name;
             editgrocery.timeout= grocery.timeout;
 
-            db.Entry(editgrocery).State = EntityState.Modified;
 
             try
             {
+                db.Entry(editgrocery).State = EntityState.Modified;
                 await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -231,6 +331,12 @@ namespace FridgeServer.Services
                 {
                     throw new AppException("Not found");
                 }
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw new AppException("Database Error");
             }
             return "edited";
         }
@@ -251,16 +357,22 @@ namespace FridgeServer.Services
             removegrocery.groceryOrBought = removegrocery.moreInformations.Last().bought;
 
             //edit
-            db.Entry(removegrocery).State = EntityState.Modified;
 
             try
             {
+                db.Entry(removegrocery).State = EntityState.Modified;
                 await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
 
                 throw new AppException("DbUpdateConcurrencyException");
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw new AppException("Database Error");
             }
             return "Ok";
         }
@@ -275,9 +387,9 @@ namespace FridgeServer.Services
                 throw new AppException("Not found");
             }
             user.userGroceries.Remove(Deletegrocery);
-            db.Users.Update(user);
             try
             {
+                db.Users.Update(user);
                 await db.SaveChangesAsync();
                 return "Deleted";
             }
@@ -285,7 +397,12 @@ namespace FridgeServer.Services
             {
                 throw new AppException("DbUpdateConcurrencyException");
             }
-
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached)
+                    Debugger.Break();
+                throw new AppException("Database Error");
+            }
         }
 
         public string guessgrocery(Grocery grocery)

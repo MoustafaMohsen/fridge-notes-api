@@ -8,7 +8,9 @@ using FridgeServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MLiberary;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -25,23 +27,41 @@ namespace FridgeServer.Controllers
     {
         private IUserService userService;
         private IMapper mapper;
-
         public UsersController(IUserService _userService, IMapper _mapper)
         {
             userService = _userService;
             mapper = _mapper;
         }
-        
 
-        //Get User Id
         [AuthTokenAny]
-        [HttpGet("GetUserId")]
+        [HttpGet("")]
         public async Task<IActionResult> GetUserId()
         {
             var CurrentUserId = GetTokenId();
             try
             {
                 var dtoUser = await userService.GetById_IncludeRole(CurrentUserId);
+                if (dtoUser == null)
+                {
+                    return BadRequest(ree("User doesn't Exsists"));
+                }
+                return Ok(ret(dtoUser, "Done"));
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(ree(ex.Message));
+            }
+        }
+
+        //Get User Id
+        [AuthTokenAny]
+        [HttpGet("GetUserId")]
+        public async Task<IActionResult> GetUserId_1()
+        {
+            var CurrentUserId = GetTokenId();
+            try
+            {
+                var dtoUser = await userService.GetUserById_include_roles_externalLogin(CurrentUserId);
                 if (dtoUser == null)
                 {
                     return BadRequest(ree("User doesn't Exsists"));
@@ -109,19 +129,30 @@ namespace FridgeServer.Controllers
         //Edit User
         [AuthTokenAny]
         [HttpPut("editUser")]
-        public async Task<IActionResult> UpdateUser(UserDto userDto)
+        public async Task<IActionResult> UpdateUser(UserDto userDto,[FromQuery(Name ="force")]bool force=false)
         {
             var CurrentUserId = GetTokenId();
             try
             {
-                var editeduser = await userService.Update(userDto);
-                var editeduserDto = mapper.Map<UserDto>(editeduser);
+                if (force&&string.IsNullOrWhiteSpace(userDto.externalProvider))
+                {
+                    return BadRequest(ree("authentication problem, please try relogin"));
+                }
+                bool requirePassword = !force;
+                var editeduser = await userService.Update(userDto, requirePassword);
+                var applicationUser =await userService.GetUserById_include_roles_externalLogin(editeduser.Id);
+                var editeduserDto = mapper.Map<UserDto>(applicationUser);
                 editeduserDto.token = await userService.GenerateUserToken(editeduser, 7);
                 return Ok(ret(editeduserDto,"Done"));
+                
             }
             catch (AppException ex)
             {
                 return BadRequest( ree(ex.Message) );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ree(ex.Message));
             }
 
         }
@@ -129,7 +160,7 @@ namespace FridgeServer.Controllers
         //Change password
         [AuthTokenAny]
         [HttpPut("changepassword")]
-        public async Task<IActionResult> ChangePassword(UpdatePasswordDto passwordDto)
+        public async Task<IActionResult> ChangePassword(UpdatePasswordDto passwordDto, [FromQuery(Name = "force")]bool force = false)
         {
 
             var CurrentUserId = GetTokenId();
@@ -140,17 +171,15 @@ namespace FridgeServer.Controllers
             passwordDto.id = CurrentUserId;
             try
             {
-                var editeduser = await userService.ChangePassword(CurrentUserId,passwordDto.oldpassword,passwordDto.newpassword);
-                var editeduserDto = mapper.Map<UserDto>(editeduser);
-                var statusText = M.isNull(editeduserDto) ? "Account Password is incorrect" : "Done";
-                if (M.isNull(editeduserDto))
+                if (force && string.IsNullOrWhiteSpace(passwordDto.externalProvider))
                 {
-                    return Ok(ret(editeduserDto,statusText));
+                    return BadRequest(ree("authentication problem, please try relogin"));
                 }
-                else
-                {
-                    return Ok(ret(editeduserDto, statusText));
-                }
+                var editeduser = await userService.UpdatePasswordForceAsync(CurrentUserId,passwordDto.newpassword, passwordDto.externalProvider);
+                var applicationUser = await userService.GetUserById_include_roles_externalLogin(editeduser.Id);
+                var editeduserDto = mapper.Map<UserDto>(applicationUser);
+                var statusText = "Done";
+                return Ok(ret(editeduserDto,statusText));
             }
             catch (AppException ex)
             {
@@ -176,6 +205,23 @@ namespace FridgeServer.Controllers
             }
         }
 
+        //Delete User
+        [AuthTokenAny]
+        [HttpDelete("DeleteUser")]
+        public async Task<IActionResult> DeleteUser()
+        {
+            var CurrentUserId = GetTokenId();
+            try
+            {
+                var editeduser = await userService.DeleteNoPassword(CurrentUserId);
+                return Ok(ret(editeduser, editeduser ? "Deleted" : "Failed"));
+            }
+            catch (AppException ex)
+            {
+                return BadRequest(ree(ex.Message));
+            }
+        }
+
 
         // Anonumous
         [AllowAnonymous]
@@ -188,7 +234,7 @@ namespace FridgeServer.Controllers
                 user = await userService.Login(userDto);
                 return Ok( ret(user, "Login successful") );
             }
-            catch (AppException ex)
+            catch (Exception ex)
             {
                 return BadRequest( ree("Username or password is incorrect") );
             }
@@ -203,9 +249,57 @@ namespace FridgeServer.Controllers
                 var registerdUser = await userService.Create(userDto, userDto.password);
                 return Ok( ret(registerdUser,"User created") );
             }
-            catch (AppException ex)
+            catch (Exception ex)
             {
                 return BadRequest( ree(ex.Message) );
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("external-facebook")]
+        public async Task<IActionResult> Creata_Login_UserFacebook([FromQuery(Name = "code")]string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return BadRequest(ree("Bad Parameters"));
+            }
+            try
+            {
+                var fridgeExternalResults = await userService.Facebook_Login_Register( code);
+                if (!fridgeExternalResults.isSuccessful)
+                {
+                    return BadRequest(ree(fridgeExternalResults.errors));
+                }
+                return Ok(ret(fridgeExternalResults.User, "Logged in"));
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ree(ex.Message));
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("external-google")]
+        public async Task<IActionResult> Creata_Login_UserGoogle([FromQuery(Name = "code")]string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return BadRequest(ree("Bad Parameters"));
+            }
+            try
+            {
+                var fridgeExternalResults = await userService.Google_Login_Register(code);
+                if (!fridgeExternalResults.isSuccessful)
+                {
+                    return BadRequest(ree(fridgeExternalResults.errors));
+                }
+                return Ok(ret(fridgeExternalResults.User, "Logged in"));
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ree("authentication failed"));
             }
         }
 

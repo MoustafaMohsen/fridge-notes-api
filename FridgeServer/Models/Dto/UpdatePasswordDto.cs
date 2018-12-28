@@ -10,5 +10,6 @@ namespace FridgeServer.Models.Dto
         public string id { get; set; }
         public string oldpassword { get; set; }
         public string newpassword { get; set; }
+        public string externalProvider { get; set; } = null;
     }
 }

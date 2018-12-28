@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Serialization;
 using System.IO;
+using static CoreUserIdentity.Models.CoreUserAppSettings;
 
 namespace FridgeServer
 {
@@ -84,6 +85,10 @@ namespace FridgeServer
                     x.appVerPath = appSettings.appVerPath;
                     x.emailSettings = appSettings.emailSettings;
                     x.jwt = appSettings.jwt;
+                    x.serviceIdentitySettings = new ServiceIdentitySettings()
+                    {
+                        UseEmailConfirmation = true
+                    };
                 },
                 appSettings.jwt.SecretKey, appSettings.jwt.Audience, appSettings.jwt.Issuer);
 
@@ -122,8 +127,8 @@ namespace FridgeServer
                 app.UseDeveloperExceptionPage();
                 app.UseDatabaseErrorPage();
             }
-
             app.UseAuthentication();
+            //app.UseHttpsRedirection();
             app.UseMvc();
         }
     }
