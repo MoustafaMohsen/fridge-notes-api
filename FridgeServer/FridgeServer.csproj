@@ -8,6 +8,13 @@
     <Version>2.3.0</Version>
     <AssemblyVersion>2.3.0.0</AssemblyVersion>
     <FileVersion>2.3.0.0</FileVersion>
+    <Authors>Moustafa Mohsen</Authors>
+    <Company>FridgeNotes</Company>
+    <Product>FridgeNotesServer</Product>
+    <PackageProjectUrl>https://github.com/MoustafaMohsen/fridge-notes-api</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/MoustafaMohsen/fridge-notes-api/assets/license.txt</PackageLicenseUrl>
+    <PackageIconUrl>https://github.com/MoustafaMohsen/fridge-notes-api/assets/icon.ico</PackageIconUrl>
+    <RepositoryUrl>https://github.com/MoustafaMohsen/fridge-notes-api</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
