@@ -61,8 +61,9 @@ namespace FridgeServer
             //=========Sql Server
             services.AddDbContext<AppDbContext>(
                 options => {
-                    //Check AppContext if Edited
-                    options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
+                    // Databases Options
+                    //options.UseSqlite(Configuration.GetConnectionString("SqliteConnection"));
+                    options.UseMySql(Configuration.GetConnectionString("MySqlServer"));
                     //options.UseInMemoryDatabase("testDb");
                     //options.UseSqlServer(Configuration.GetConnectionString("LocalSqlServer"));
                 }
