@@ -5,9 +5,9 @@
     <ApplicationIcon />
     <OutputType>WinExe</OutputType>
     <StartupObject />
-    <Version>2.3.0</Version>
-    <AssemblyVersion>2.3.0.0</AssemblyVersion>
-    <FileVersion>2.3.0.0</FileVersion>
+    <Version>2.4.0</Version>
+    <AssemblyVersion>2.4.0.0</AssemblyVersion>
+    <FileVersion>2.4.0.0</FileVersion>
     <Authors>Moustafa Mohsen</Authors>
     <Company>FridgeNotes</Company>
     <Product>FridgeNotesServer</Product>
@@ -42,7 +42,7 @@
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="2.1.1" />
 	    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.1" PrivateAssets="All" />
-	    <PackageReference Include="MLiberary" Version="2.0.0" />
+	    <PackageReference Include="MLiberary" Version="2.2.1" />
 	    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="2.1.4" />
 	    <PackageReference Include="Sendgrid" Version="9.10.0" />
 	    <PackageReference Include="VerficationEmailSender" Version="2.0.0" />

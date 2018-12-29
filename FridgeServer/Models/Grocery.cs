@@ -13,7 +13,7 @@ namespace FridgeServer.Models
     public class Grocery
     {
         [Key]
-        public int id { get; set; }
+        public string id { get; set; }
 
         [MaxLength(length: 128)]
         [Required]
@@ -55,7 +55,8 @@ namespace FridgeServer.Models
 
     public class MoreInformation
     {
-        public int id { get; set; }
+        [Key]
+        public string id { get; set; }
         public long? date { get; set; }// = (long)Alarm.DateTimeToUnixTime(DateTime.Now);  //the date in which the item have been bought or added/Needed to note
         public bool bought { get; set; } = false; // false = Need / true=Bought
         public long? lifeTime { get; set; } = 0;//the lifetime number

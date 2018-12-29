@@ -10,7 +10,10 @@ using FridgeServer.Models.Dto;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using MLiberary;
+using MLiberary.Helpers;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -42,7 +45,7 @@ namespace FridgeServer.Services
         Task<UserFriend> AddFreindToMe(FriendRequestDto friendRequestDto);
         Task<bool> DeleteFriendship(FriendRequestDto friendRequestDto);
         Task<bool> DeleteFriendsToEachothers(string idA, string idB);
-        Task<string> GenerateUserInvitaionCodeAsync(string id);
+        Task<string> GenerateUserInvitaionCodeAsync(string id,bool force = false);
         bool IdInFriends(List<UserFriend> userfriends, string friendId);
         Task<bool> AreFriendsAsync(string userId, string GevenId);
         Task<List<UserFriend>> GetFriends(string userId);
@@ -392,22 +395,29 @@ namespace FridgeServer.Services
             {
                 throw new AppException("Not Valid");
             }
-            var invetationCode = friendRequestDto.invetationCode;
 
-            //Do logic to conver invetation code to code, for now no logic
-            //CHANGE LATER
-            var SecretId = invetationCode;//EncryptionHelper.Decrypt(code);
-            var friend = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.secretId == SecretId);
+            var invetationCode = friendRequestDto.invetationCode;
+            var results = IsInvitationValid(invetationCode);
+            if (!results.isSuccessful)
+            {
+                throw new AppException(results.errors);
+            }
+            string friendId = results.userId;
+            string userId = friendRequestDto.userId;
+            // Validations 
+            if (userId.ToLower() == friendId.ToLower())
+            {
+                throw new AppException("Not Valid");
+            }
+            var friend = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.Id == friendId);
             if (friend == null)
                 throw new AppException("User not found");
-            if (friend.Id == friendRequestDto.userId)
-                throw new AppException("Not Valid");
 
             //if friend already added you
-            if( friend.userFriends.Any(x=>x.friendUserId==friendRequestDto.userId) )
+            if( friend.userFriends.Any(x=>x.friendUserId== userId) )
                 throw new AppException("Friend already added you");
 
-            var objectFriends =await AddFriendsToEachothers(friend.Id,friendRequestDto.userId);
+            var objectFriends =await AddFriendsToEachothers(friend.Id, userId);
             return objectFriends;
         }
         public async Task<UserFriend> AddFriendsToEachothers(string idA, string idB)
@@ -460,30 +470,28 @@ namespace FridgeServer.Services
 
             return UserBFriendObject;
         }
+
         public async Task<bool> DeleteFriendship(FriendRequestDto friendRequestDto)
         {
+            string userId = friendRequestDto.userId;
+            string friendId = friendRequestDto.invetationCode;
             // Validations 
-            if (string.IsNullOrWhiteSpace(friendRequestDto.invetationCode) || string.IsNullOrWhiteSpace(friendRequestDto.userId))
+            if (string.IsNullOrWhiteSpace(friendId) || string.IsNullOrWhiteSpace(userId) || userId== friendId)
             {
                 throw new AppException("Not Valid");
             }
-            var invetationCode = friendRequestDto.invetationCode;
 
-            //Do logic to conver invetation code to code, for now no logic
-            //CHANGE LATER
-            var SecretId = invetationCode;//EncryptionHelper.Decrypt(code);
-            var friend = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.secretId == SecretId);
+            var friend = await db.Users.Include("userFriends").FirstOrDefaultAsync(x => x.Id == friendId);
+
             if (friend == null)
                 throw new AppException("User not found");
-            if (friend.Id == friendRequestDto.userId)
-                throw new AppException("Not Valid");
 
             //if friend did not add you
-            if ( !friend.userFriends.Any(x => x.friendUserId == friendRequestDto.userId))
-                throw new AppException("None Existent");
+            //if ( !friend.userFriends.Any(x => x.friendUserId == friendRequestDto.userId))
+           //     throw new AppException("None Existent");
 
 
-            var Successful = await DeleteFriendsToEachothers(friend.Id, friendRequestDto.userId);
+            var Successful = await DeleteFriendsToEachothers(userId, friendId);
             return Successful;
         }
         public async Task<bool> DeleteFriendsToEachothers(string idA, string idB)
@@ -529,19 +537,109 @@ namespace FridgeServer.Services
             }
 
         }
+
         // TODO: Add secret Encryption
-        public async Task<string> GenerateUserInvitaionCodeAsync(string id)
+        public async Task<string> GenerateUserInvitaionCodeAsync(string Id,bool force = false)
         {
-            var user = await GetById_Manager(id);
-            var secret = user.secretId;
-            string code = "";
-            // EncryptionHelper.Encrypt(secret);
-            //Do logic to conver invetation code to code, for now no logic
-            //CHANGE LATER
-            code = secret;
-            var invetationCode = secret;
+            //check that the user exsists first
+            if (force==false)
+            {
+                var user = await GetById_Manager(Id);
+                if (user==null)
+                {
+                    throw new AppException("User Wasn't found");
+                }
+            }
+            var invetationCode = CreateInvitationCode(Id); ;
             return invetationCode;
         }
+
+        public InvitationDto StringToInvitation(string str)
+        {
+            var invitation = JsonConvert.DeserializeObject<InvitationDto>(str);
+            return invitation;
+        }
+        public string InvitationToString(InvitationDto obj)
+        {
+            var invitation = JsonConvert.SerializeObject(obj);
+            return invitation;
+        }
+
+        // Decryption
+        public InvitationResult IsInvitationValid(string str)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(str))
+                {
+                    var results = new InvitationResult()
+                    {
+                        errors = "code is invalid"
+                    };
+                    return results;
+                }
+                string key = appSettings.jwt.SecretKey;
+                string decoded = Encode_Decode.Decrypt(str, key);
+                var invetation = StringToInvitation(decoded);
+                bool invalid = M.isNull(invetation);
+                if (invalid)
+                {
+                    var results = new InvitationResult()
+                    {
+                        errors = "code is invalid"
+                    };
+                    return results;
+                }
+                var now = M.GetUtcInSecound();
+                bool IsExpired = invetation.expire < now;
+                if (IsExpired)
+                {
+                    var results = new InvitationResult()
+                    {
+                        errors = "code is expired"
+                    };
+                    return results;
+                }
+
+                return new InvitationResult()
+                {
+                    userId = invetation.userId
+                };
+            }
+            catch (Exception ex)
+            {
+                var results = new InvitationResult()
+                {
+                    errors = "code is invalid"
+                };
+                return results;
+            }
+        }
+
+        // Encrypt
+        public string CreateInvitationCode(string userid, int lifeInHours = 48)
+        {
+            try
+            {
+                var life = DateTime.UtcNow.AddHours(lifeInHours);
+                InvitationDto results = new InvitationDto()
+                {
+                    userId = userid,
+                    expire = M.DateTimeToUnixTime(life)
+                };
+
+                var str = InvitationToString(results);
+                string key = appSettings.jwt.SecretKey;
+                string encoded = Encode_Decode.Encrypt(str, key);
+                return encoded;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+
+        }
+
         public bool IdInFriends(List<UserFriend> userfriends,string friendId)
         {
             for (int i = 0; i < userfriends.Count; i++)

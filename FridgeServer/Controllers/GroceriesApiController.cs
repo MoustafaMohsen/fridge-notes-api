@@ -46,15 +46,15 @@ namespace FridgeServer.Controllers
 
         [AuthTokenClient]
         [HttpGet("grocerybyid")]
-        public async Task<IActionResult> GetGrocery([FromQuery(Name ="groceryid")] int GroceryId, [FromQuery(Name = "friend")] string friendId)
+        public async Task<IActionResult> GetGrocery([FromQuery(Name ="groceryid")] string GroceryId, [FromQuery(Name = "friend")] string friendId)
         {
             var Id = GetTokenId();
-            if (friendId != Id && string.IsNullOrWhiteSpace(friendId))
+            if (friendId != Id && !string.IsNullOrWhiteSpace(friendId))
             {
                 string IdValidation = await userService.UserIdOrFriendId(Id, friendId);
                 if (IdValidation == null)
                 {
-                    return Ok(ree("Grocery could not be found"));
+                    return BadRequest(ree("Grocery could not be found"));
                 }
                 else
                 {

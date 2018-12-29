@@ -9,7 +9,8 @@ namespace FridgeServer.Models
 {
     public class UserFriend
     {
-        public int id { get; set; }
+        [Key]
+        public string id { get; set; }
 
         [MaxLength(length: 255)]
         public string friendUsername { get; set; }

@@ -15,9 +15,9 @@ namespace FridgeServer.Services
     public interface IGroceriesService
     {
         Task<List<Grocery>> GetGrocery(string userId);
-        Task<Grocery> GetGroceryById(int Groceryid, string userId);
+        Task<Grocery> GetGroceryById(string Groceryid, string userId);
         Task<ApplicationUser> AddGrocery(Grocery grocery, string userId);
-        Task<bool> CheckGroceryState(int Groceryid, string userId, bool bought);
+        Task<bool> CheckGroceryState(string Groceryid, string userId, bool bought);
         bool CheckGroceryState(Grocery grocery, bool bought);
         Task neededGrocery(Grocery grocery, string userId, bool checkfirst);
         Task<string> boughtgrocery(Grocery grocery, string userId, bool checkfirst);
@@ -124,7 +124,7 @@ namespace FridgeServer.Services
             return false;
         }
 
-        public async Task<Grocery> GetGroceryById(int Groceryid,string userId )
+        public async Task<Grocery> GetGroceryById(string Groceryid,string userId )
         {
             var grocery = await GetSpecificGroceryForUser(Groceryid, userId);
 
@@ -136,7 +136,7 @@ namespace FridgeServer.Services
             return grocery;
         }
 
-        public async Task<bool> CheckGroceryState(int Groceryid, string userId,bool bought)
+        public async Task<bool> CheckGroceryState(string Groceryid, string userId,bool bought)
         {
             var grocery = await GetSpecificGroceryForUser(Groceryid, userId);
 
@@ -449,7 +449,7 @@ namespace FridgeServer.Services
             return friends;
         }
 
-        private async Task<Grocery> GetSpecificGroceryForUser(int groceryid, string userId)
+        private async Task<Grocery> GetSpecificGroceryForUser(string groceryid, string userId)
         {
             var groceries =(await GetFullUser(userId))
                 .userGroceries
@@ -458,7 +458,7 @@ namespace FridgeServer.Services
             return groceries;
         }
 
-        private async Task<bool> GroceryExistsId(int Groceryid, string userId)
+        private async Task<bool> GroceryExistsId(string Groceryid, string userId)
         {
             return await db.Users.AnyAsync(u => u.Id == userId && u.userGroceries.Any(e => e.id == Groceryid ));
         }
