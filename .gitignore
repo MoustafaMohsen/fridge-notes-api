@@ -269,3 +269,4 @@ AppSettings/
 *.ps1
 Dockerfile
 #test
+PublishProfiles/
