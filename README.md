@@ -1,6 +1,6 @@
 # Fridge Notes
 
-Project Url [Here](https://mydevenv.tk/)
+Project Url [Here](https://fridgenotes.moustafamohsen.com/)
 
 Create grocery notes on your account and share them with your roommate or family so they're always updated with the grocery you need
 
